@@ -51,8 +51,10 @@ st.sidebar.markdown("## 🧬 Zero-Burn Lab v3.0")
 st.sidebar.markdown("*Deep Scientific Simulation*")
 st.sidebar.divider()
 
-st.sidebar.markdown("### Round 1: Physics")
+st.sidebar.markdown("### Select a Lab")
 lab = st.sidebar.radio("Select Lab:", [
+    "📊 Journey Summary",
+    "─── Round 1: Physics ───",
     "🔬 Advanced Heat Transfer",
     "🦠 Sterilization Science",
     "📈 Growth Kinetics",
@@ -104,9 +106,145 @@ st.sidebar.caption("Physics • Biology • Env • Econ • Tech • Risk • H
 
 
 # ================================================================
+# JOURNEY SUMMARY (Landing Page)
+# ================================================================
+if lab == "📊 Journey Summary":
+    st.title("📊 Zero-Burn Blueprint — Journey Summary")
+    st.markdown("*From burning straw to a ฿232K+ operation. 9 rounds of research. 36 labs. Here's the full picture.*")
+
+    # ─── Hero Metrics ───
+    h1, h2, h3, h4 = st.columns(4)
+    with h1:
+        st.metric("🔥 Day 1 Income", "฿50,000/yr", delta=None)
+    with h2:
+        st.metric("🛸 Optimized Income", "฿232,000+/yr", delta="4.6×")
+    with h3:
+        st.metric("🧪 Research Rounds", "9 Rounds")
+    with h4:
+        st.metric("🔬 Simulation Labs", "36 Labs")
+
+    st.divider()
+
+    # ─── Income Progression Chart ───
+    st.subheader("📈 Income Journey — From ฿50K to ฿232K+")
+
+    stages = ['🔥 Day 1<br>(Burn Straw)', '🍄 Round 1-5<br>(Basic Plan)', '🛡️ Round 6-7<br>(Validated)', '🧬 Round 8<br>(Breakthrough)', '🛸 Round 9<br>(Final)']
+    incomes = [50000, 97000, 97000, 197000, 232000]
+    colors = ['#ef4444', '#f59e0b', '#f59e0b', '#10b981', '#3b82f6']
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=stages, y=incomes,
+        marker_color=colors,
+        text=[f'฿{v:,.0f}' for v in incomes],
+        textposition='outside',
+        textfont=dict(size=16, color='white'),
+    ))
+    fig.update_layout(
+        height=400,
+        template='plotly_dark',
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        yaxis_title='Annual Income (฿)',
+        yaxis=dict(range=[0, 280000]),
+        showlegend=False,
+        margin=dict(t=20),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    # ─── Two Column: Comparison + Discoveries ───
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        st.subheader("⚖️ Before vs After (per farmer, 15 rai)")
+        st.markdown("""
+| Metric | 🔥 Burning | 🛸 Zero-Burn |
+|--------|-----------|-------------|
+| Rice income | ฿150,000 | ฿150,000 |
+| Rice costs | -฿100,000 | -฿100,000 |
+| Mushroom income | ฿0 | **฿147,000+** |
+| Drone spray savings | — | +฿24,885 |
+| Health savings | ฿0 | +฿9,111 |
+| Circular economy | — | +฿8,500 |
+| Equipment cost | ฿0 | -฿500 |
+| Pasteurization | — | -฿6,815 |
+| | | |
+| **NET INCOME** | **฿50,000** | **฿232,000+** |
+| **Monthly** | **฿4,200** | **฿19,350** |
+        """)
+
+    with col_right:
+        st.subheader("🏆 Top 5 Discoveries")
+        st.markdown("""
+| # | Discovery | Impact |
+|---|-----------|--------|
+| 1 | 🍄 **Oyster mushroom** (BE 95%) | +฿93K/yr |
+| 2 | 🧪 **Lime cold pasteurization** | +฿28K/yr |
+| 3 | 🛸 **Drone spraying** (-40% chems) | +฿25K/yr |
+| 4 | 🏠 **Polyhouse** (5 cycles/yr) | +฿22K/yr |
+| 5 | 🤝 **10-farmer cooperative** | +฿20K/yr |
+        """)
+
+        st.subheader("💚 Environmental Impact")
+        e1, e2 = st.columns(2)
+        with e1:
+            st.metric("PM2.5 Eliminated", "76.5 kg/yr", delta="-100%")
+            st.metric("Chemical Reduction", "40%", delta="Drone precision")
+        with e2:
+            st.metric("Healthcare Savings", "฿9,111/yr", delta="-95% hospital visits")
+            st.metric("Life Expectancy", "+2 years", delta="vs burning exposure")
+
+    st.divider()
+
+    # ─── Optimized Setup ───
+    st.subheader("🏗️ The Optimized Setup")
+    setup_cols = st.columns(5)
+    steps = [
+        ("🌾", "Harvest", "Collect straw (don't burn)"),
+        ("🛸", "Drone Spray", "Lime solution, 12-24h soak"),
+        ("🍄", "Cultivate", "Oyster mushroom, BE 95%"),
+        ("♻️", "Recycle", "SMS → vermicompost"),
+        ("💰", "Profit", "฿232K+/yr per farmer"),
+    ]
+    for col, (icon, title, desc) in zip(setup_cols, steps):
+        with col:
+            st.markdown(f"### {icon}")
+            st.markdown(f"**{title}**")
+            st.caption(desc)
+
+    st.divider()
+
+    # ─── Lab Inventory ───
+    st.subheader("🧪 All 36 Labs Across 9 Rounds")
+    rounds_data = {
+        "Round 1: Physics": ["Boiler Engineering", "Heat Transfer", "Sterilization", "Growth Kinetics", "Substrate", "Seasonal", "Competitive Analysis", "Monte Carlo"],
+        "Round 2: Biology": ["Spawn Rate", "Moisture & Soaking", "Indoor vs Outdoor", "Harvest Labor"],
+        "Round 3: Environment": ["Straw Degradation", "Temperature Corridor"],
+        "Round 4: Economics": ["Cooperative Model", "Market Absorption", "Year-Round Planner"],
+        "Round 5: Technology": ["Carbon Credits (T-VER)", "IoT & MRV", "Tractor Ops", "Autonomous Tractor"],
+        "Round 6: Risk": ["Contamination Stress", "Market Saturation", "Rice Variety", "Adoption S-Curve", "Sensitivity Tornado"],
+        "Round 7: Health": ["PM2.5 Emissions", "Healthcare Cost", "Regional Pollution"],
+        "Round 8: Breakthrough": ["Multi-Species", "Circular Economy", "Biochar", "Enzymatic Pre-treatment", "Mycelium Materials"],
+        "Round 9: Drones": ["Drone Operations & ROI", "Cold Pasteurization"],
+    }
+
+    r_cols = st.columns(3)
+    for i, (round_name, labs_list) in enumerate(rounds_data.items()):
+        with r_cols[i % 3]:
+            st.markdown(f"**{round_name}** ({len(labs_list)} labs)")
+            for l in labs_list:
+                st.caption(f"• {l}")
+
+    st.divider()
+    st.info("👈 **Select any lab from the sidebar** to explore the interactive simulation. Every lab has adjustable parameters and verified scientific references.")
+
+
+# ================================================================
 # LAB 1: ADVANCED HEAT TRANSFER (ROUND 1)
 # ================================================================
-if lab == "🔬 Advanced Heat Transfer":
+elif lab == "🔬 Advanced Heat Transfer":
     st.title("🔬 Advanced Heat Transfer Analysis")
     st.markdown("*Helical coil heat transfer using Dean number correlations (Schmidt 1967, Seban & McLaughlin 1963).*")
 
