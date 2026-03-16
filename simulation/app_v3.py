@@ -31,6 +31,7 @@ from engines_v3 import (
     compute_solar_drying, compute_vertical_tiers, compute_spawn_production,
     compute_ecommerce_channels, compute_solar_energy, compute_beta_glucan,
     compute_pilot_roadmap,
+    compute_water_management, compute_climate_resilience, compute_labor_allocation,
     DEFAULT_TUBE_ID, DEFAULT_TUBE_OD, DEFAULT_COIL_DIAM,
 )
 from references import render_references
@@ -50,8 +51,13 @@ st.set_page_config(
 # ================================================================
 # SIDEBAR
 # ================================================================
-st.sidebar.markdown("## 🧬 Zero-Burn Lab v3.0")
+st.sidebar.markdown("## 🧬 Zero-Burn Lab v4.0")
 st.sidebar.markdown("*Deep Scientific Simulation*")
+
+# Thai language toggle
+lang = st.sidebar.toggle("🇹🇭 ภาษาไทย", value=False, key="lang_toggle")
+TH = lang  # shorthand
+
 st.sidebar.divider()
 
 st.sidebar.markdown("### Select a Lab")
@@ -110,30 +116,34 @@ lab = st.sidebar.radio("Select Lab:", [
     "🧬 Beta-Glucan Supplements",
     "─── Pilot Program ───",
     "🚀 Pilot Roadmap",
+    "─── Round 11: Resilience ───",
+    "💧 Water & Humidity",
+    "🌡️ Climate Resilience",
+    "👷 Labor Allocation",
 ], index=0)
 
 st.sidebar.divider()
-st.sidebar.caption("v3.6 — All 10 Research Rounds")
-st.sidebar.caption("Physics • Biology • Env • Econ • Tech • Risk • Health • Break • Drones • Value")
+st.sidebar.caption("v4.0 — 11 Rounds + Pilot Program")
+st.sidebar.caption("46 Labs • 80+ References • Thai/English")
 
 
 # ================================================================
 # JOURNEY SUMMARY (Landing Page)
 # ================================================================
 if lab == "📊 Journey Summary":
-    st.title("📊 Zero-Burn Blueprint — Journey Summary")
-    st.markdown("*From burning straw to a ฿232K+ operation. 9 rounds of research. 36 labs. Here's the full picture.*")
+    st.title("📊 Zero-Burn Blueprint — " + ("สรุปเส้นทาง" if TH else "Journey Summary"))
+    st.markdown("*" + ("จากการเผาฟางสู่รายได้ ฿381K/ปี — 11 รอบวิจัย, 46 แล็บ" if TH else "From burning straw to ฿381K/yr. 11 rounds. 46 labs. Realistic pilot roadmap.") + "*")
 
     # ─── Hero Metrics ───
     h1, h2, h3, h4 = st.columns(4)
     with h1:
-        st.metric("🔥 Day 1 Income", "฿50,000/yr", delta=None)
+        st.metric("🔥 " + ("วันที่ 1" if TH else "Day 1"), "฿50,000/" + ("ปี" if TH else "yr"))
     with h2:
-        st.metric("🛸 Optimized Income", "฿232,000+/yr", delta="4.6×")
+        st.metric("🚀 " + ("เดือนที่ 36" if TH else "Month 36 Pilot"), "฿381,000/" + ("ปี" if TH else "yr"), delta="7.6×")
     with h3:
-        st.metric("🧪 Research Rounds", "9 Rounds")
+        st.metric("🧪 " + ("รอบวิจัย" if TH else "Rounds"), "11")
     with h4:
-        st.metric("🔬 Simulation Labs", "36 Labs")
+        st.metric("🔬 " + ("แล็บ" if TH else "Labs"), "46")
 
     st.divider()
 
@@ -3129,3 +3139,180 @@ with learning curves, contamination, and incremental adoption.
             st.info(f"💡 **Training quality matters most!** You selected '{training}' — this impacts contamination rates, learning speed, and final yield. The difference between 'poor' and 'excellent' training is **±40% income**.")
 
     render_references("🚀 Pilot Roadmap")
+
+
+elif lab == "💧 Water & Humidity":
+    st.title("💧 " + ("การจัดการน้ำและความชื้น" if TH else "Water & Humidity Management Lab"))
+    st.markdown("*" + ("ระบบพ่นหมอก น้ำฝน และค่าใช้จ่ายน้ำสำหรับเห็ด" if TH else "Misting systems, rainwater harvesting, and humidity control costs.") + "*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️")
+        bags = st.slider("Bags/farmer", 200, 2000, 800, key="wm_b")
+        method = st.selectbox("Misting method", ['manual', 'drip', 'fogger', 'auto_mist'],
+                             format_func=lambda x: {'manual': '💧 Manual', 'drip': '💦 Drip', 'fogger': '🌫️ Fogger', 'auto_mist': '🤖 Auto'}[x], key="wm_m")
+        rain = st.checkbox("Rainwater harvesting", True, key="wm_r")
+        coop = st.slider("Coop size", 1, 30, 10, key="wm_c")
+
+    r = compute_water_management(n_bags=bags, misting_method=method, rainwater_harvesting=rain, cooperative_size=coop)
+
+    with col2:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("💧 Annual Water", f"{r['annual_water_need_m3']} m³")
+        with m2:
+            st.metric("🌧️ Rainwater", f"{r['rainwater_collected_m3']} m³")
+        with m3:
+            st.metric("💰 Annual Cost", f"฿{r['total_annual']:,}")
+        with m4:
+            st.metric("👤 Per Farmer", f"฿{r['per_farmer']:,}/yr")
+
+        st.divider()
+        c1, c2 = st.columns(2)
+        with c1:
+            comp = r['comparisons']
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=[c['method'] for c in comp], y=[c['total_annual'] for c in comp],
+                                marker_color=['#6b7280', '#3b82f6', '#10b981', '#8b5cf6'],
+                                text=[f"฿{c['total_annual']:,}" for c in comp], textposition='outside'))
+            fig.update_layout(title='Annual Cost by Method', height=350, template='plotly_white')
+            st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            h = r['humidity']
+            st.markdown(f"""
+### 🌡️ Humidity Guide
+| Range | Effect |
+|-------|--------|
+| Below 80% | ⚠️ {h['below_80_risk']} |
+| **80-90%** | ✅ **{h['optimal']}** |
+| Above 95% | ⚠️ {h['above_95_risk']} |
+
+### 💧 Water Balance
+| Source | Volume |
+|--------|--------|
+| Total need | {r['annual_water_need_m3']} m³/yr |
+| Rainwater | {r['rainwater_collected_m3']} m³ |
+| **Purchased** | **{r['purchased_water_m3']} m³** |
+            """)
+
+    render_references("💧 Water & Humidity")
+
+
+elif lab == "🌡️ Climate Resilience":
+    st.title("🌡️ " + ("ความยืดหยุ่นต่อการเปลี่ยนแปลงสภาพภูมิอากาศ" if TH else "Climate Change Resilience Lab"))
+    st.markdown("*" + ("ผลกระทบของสภาพอากาศเปลี่ยนแปลงต่อฤดูเพาะเห็ด 2025-2040" if TH else "How will warming affect mushroom growing seasons from 2025 to 2040?") + "*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️")
+        region = st.selectbox("Region", ['isaan', 'central', 'north', 'south'],
+                             format_func=lambda x: {'isaan': '🌾 Isaan', 'central': '🏙️ Central', 'north': '⛰️ North', 'south': '🌴 South'}[x], key="cr_r")
+        scenario = st.selectbox("Climate scenario", ['optimistic', 'moderate', 'severe'],
+                               format_func=lambda x: {'optimistic': '🟢 SSP1 Best', 'moderate': '🟡 SSP2 Middle', 'severe': '🔴 SSP5 Worst'}[x], key="cr_s")
+        proj_year = st.slider("Projection year", 2030, 2050, 2040, key="cr_y")
+        poly = st.checkbox("Has polyhouse", True, key="cr_p")
+
+    r = compute_climate_resilience(region=region, scenario=scenario, projection_year=proj_year, polyhouse=poly)
+
+    with col2:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("🌡️ Temp Rise", f"+{r['temp_rise']}°C", delta=f"by {r['projection_year']}")
+        with m2:
+            gs = r['growing_season']
+            st.metric("🍄 Oyster Months", f"{gs['oyster_current']} → {gs['oyster_projected']}", delta=f"+{gs['oyster_projected']-gs['oyster_current']}")
+        with m3:
+            c = r['cycles']
+            st.metric("🔄 Cycles/yr", f"{c['current']} → {c['projected']}", delta=f"+{c['change']}")
+        with m4:
+            st.metric("🌧️ Rainfall", f"{r['rainfall_change_pct']}%")
+
+        st.divider()
+        # Monthly temperature chart
+        md = r['months_data']
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=[m['month'] for m in md], y=[m['current_temp'] for m in md],
+                                name='Current', line=dict(color='#3b82f6', width=2)))
+        fig.add_trace(go.Scatter(x=[m['month'] for m in md], y=[m['projected_temp'] for m in md],
+                                name=f'Projected {proj_year}', line=dict(color='#ef4444', width=2, dash='dash')))
+        if poly:
+            fig.add_trace(go.Scatter(x=[m['month'] for m in md], y=[m['polyhouse_temp'] for m in md],
+                                    name='Polyhouse', line=dict(color='#10b981', width=2)))
+        fig.add_hline(y=25, line_dash="dot", line_color="orange", annotation_text="V. volvacea min (25°C)")
+        fig.add_hline(y=15, line_dash="dot", line_color="cyan", annotation_text="P. ostreatus min (15°C)")
+        fig.update_layout(title=f'Monthly Temperature — {r["region"]}', height=400, template='plotly_white',
+                         yaxis_title='°C', xaxis_title='Month')
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.success(f"🔮 **{r['verdict']}**")
+
+        with st.expander("🛡️ Adaptation Strategies"):
+            a = r['adaptation']
+            for key, value in a.items():
+                st.markdown(f"- **{key.replace('_', ' ').title()}:** {value}")
+
+    render_references("🌡️ Climate Resilience")
+
+
+elif lab == "👷 Labor Allocation":
+    st.title("👷 " + ("การจัดสรรแรงงาน" if TH else "Labor Allocation Model"))
+    st.markdown("*" + ("ใครทำอะไร กี่ชั่วโมง ครอบครัว vs จ้าง" if TH else "Who does what, how many hours, family vs hired labor.") + "*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️")
+        bags = st.slider("Bags/farmer", 200, 2000, 800, key="la_b")
+        cyc = st.slider("Cycles/year", 3, 8, 5, key="la_cy")
+        tiers = st.slider("Vertical tiers", 1, 6, 4, key="la_t")
+        drying = st.checkbox("Solar drying", True, key="la_d")
+        ecom = st.checkbox("E-commerce", True, key="la_e")
+        spawn = st.checkbox("Spawn lab", False, key="la_s")
+        family = st.slider("Family workers", 1, 4, 2, key="la_fw")
+        hired = st.slider("Hired workers", 0, 3, 0, key="la_hw")
+
+    r = compute_labor_allocation(n_bags=bags, cycles_per_year=cyc, vertical_tiers=tiers,
+                                has_solar_drying=drying, has_ecommerce=ecom, has_spawn_lab=spawn,
+                                family_workers=family, hired_workers=hired)
+
+    with col2:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("⏱️ Hours/day", f"{r['avg_hours_per_day']}")
+        with m2:
+            st.metric("📊 Hours/year", f"{r['total_hours_per_year']:,}")
+        with m3:
+            lab_data = r['labor']
+            st.metric("👷 Sufficiency", f"{lab_data['sufficiency_pct']}%", delta=lab_data['verdict'])
+        with m4:
+            st.metric("💰 Hired Cost", f"฿{r['costs']['total']:,}/yr")
+
+        st.divider()
+        c1, c2 = st.columns(2)
+        with c1:
+            tasks = r['tasks']
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=[t['name'] for t in tasks[:8]], y=[t['annual_hours'] for t in tasks[:8]],
+                                marker_color='#10b981',
+                                text=[f"{t['annual_hours']}h ({t['pct_of_total']}%)" for t in tasks[:8]],
+                                textposition='outside'))
+            fig.update_layout(title='Annual Hours by Task', height=400, template='plotly_white',
+                             xaxis=dict(tickangle=45), yaxis_title='Hours/year')
+            st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            st.markdown("### 👷 Labor Balance")
+            l = r['labor']
+            st.markdown(f"""
+| Resource | Hours/day |
+|----------|----------|
+| 👨‍👩‍👧 Family ({l['family_workers']} × 4h) | {l['family_hours_day']}h |
+| 🧑‍🔧 Hired ({l['hired_workers']} × 8h) | {l['hired_hours_day']}h |
+| **Available** | **{l['available_hours_day']}h** |
+| **Needed** | **{l['needed_hours_day']}h** |
+| **Status** | **{l['verdict']}** |
+            """)
+
+            st.markdown("### 📋 Task Details")
+            for t in tasks[:6]:
+                st.markdown(f"- **{t['name']}**: {t['annual_hours']}h/yr ({t['skill']} skill) — {t['when']}")
+
+    render_references("👷 Labor Allocation")

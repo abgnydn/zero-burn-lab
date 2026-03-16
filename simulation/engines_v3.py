@@ -4413,3 +4413,294 @@ def compute_pilot_roadmap(
         'final_monthly': month_36['total_income'],
         'income_multiplier': round(month_36['total_income'] / (rice_net_income / 12), 1),
     }
+
+
+# ── LAB 44: WATER & HUMIDITY MANAGEMENT ──
+def compute_water_management(
+    polyhouse_m2: float = 20,
+    n_bags: int = 800,
+    cycles_per_year: int = 5,
+    target_humidity_pct: float = 85,
+    misting_method: str = 'manual',
+    rainwater_harvesting: bool = True,
+    roof_area_m2: float = 30,
+    annual_rainfall_mm: float = 1200,
+    water_price_per_m3: float = 15,
+    cooperative_size: int = 10,
+) -> Dict:
+    """Water and humidity management costs for mushroom cultivation.
+    Sources: FAO water guides, Thai Met Dept rainfall data."""
+
+    # Water needs per cycle
+    substrate_soaking_L = n_bags * 2.5 * 1.5  # 1.5L per kg substrate for soaking
+    daily_misting_L = polyhouse_m2 * 2  # 2L/m² daily for humidity
+    days_per_cycle = 45
+    misting_per_cycle_L = daily_misting_L * days_per_cycle
+
+    total_per_cycle = substrate_soaking_L + misting_per_cycle_L
+    annual_water_L = total_per_cycle * cycles_per_year
+    annual_water_m3 = annual_water_L / 1000
+
+    # Misting system costs
+    methods = {
+        'manual': {'equipment': 500, 'daily_labor_min': 30, 'efficiency_pct': 60, 'name': '💧 Manual spraying'},
+        'drip': {'equipment': 3000, 'daily_labor_min': 5, 'efficiency_pct': 85, 'name': '💦 Drip irrigation'},
+        'fogger': {'equipment': 8000, 'daily_labor_min': 2, 'efficiency_pct': 95, 'name': '🌫️ Ultrasonic fogger'},
+        'auto_mist': {'equipment': 15000, 'daily_labor_min': 0, 'efficiency_pct': 98, 'name': '🤖 Auto mist + sensor'},
+    }
+    m = methods[misting_method]
+
+    # Effective water use (less efficient = more water wasted)
+    effective_water_m3 = annual_water_m3 / (m['efficiency_pct'] / 100)
+
+    # Rainwater harvesting
+    if rainwater_harvesting:
+        collected_L = roof_area_m2 * annual_rainfall_mm * 0.8  # 80% collection efficiency
+        collected_m3 = collected_L / 1000
+        tank_cost = 5000  # 2000L tank
+    else:
+        collected_m3 = 0
+        tank_cost = 0
+
+    purchased_water_m3 = max(0, effective_water_m3 - collected_m3)
+    water_cost = purchased_water_m3 * water_price_per_m3
+
+    # Labor cost (min wage)
+    labor_cost = m['daily_labor_min'] * (370 / 480) * days_per_cycle * cycles_per_year  # 370 baht / 480 min day
+
+    total_annual = water_cost + labor_cost + m['equipment'] / 5  # 5yr depreciation
+    tank_annual = tank_cost / 10 if rainwater_harvesting else 0
+
+    # Compare all methods
+    comparisons = []
+    for key, method in methods.items():
+        eff_water = annual_water_m3 / (method['efficiency_pct'] / 100)
+        pw = max(0, eff_water - collected_m3) if rainwater_harvesting else eff_water
+        wc = pw * water_price_per_m3
+        lc = method['daily_labor_min'] * (370 / 480) * days_per_cycle * cycles_per_year
+        tc = wc + lc + method['equipment'] / 5
+        comparisons.append({
+            'method': method['name'], 'key': key,
+            'equipment': method['equipment'],
+            'water_cost': round(wc), 'labor_cost': round(lc),
+            'total_annual': round(tc),
+            'efficiency': method['efficiency_pct'],
+        })
+
+    return {
+        'annual_water_need_m3': round(effective_water_m3, 1),
+        'rainwater_collected_m3': round(collected_m3, 1),
+        'purchased_water_m3': round(purchased_water_m3, 1),
+        'water_cost': round(water_cost),
+        'labor_cost': round(labor_cost),
+        'equipment_cost': m['equipment'],
+        'total_annual': round(total_annual + tank_annual),
+        'selected_method': m['name'],
+        'comparisons': comparisons,
+        'humidity': {
+            'target_pct': target_humidity_pct,
+            'below_80_risk': 'Caps dry out, yield drops 30-50%',
+            'above_95_risk': 'Bacterial blotch, green mold risk',
+            'optimal': '80-90% RH with air exchange 4-6 times/hr',
+        },
+        'per_farmer': round((total_annual + tank_annual) / cooperative_size) if cooperative_size > 0 else 0,
+    }
+
+
+# ── LAB 45: CLIMATE CHANGE RESILIENCE ──
+def compute_climate_resilience(
+    region: str = 'isaan',
+    scenario: str = 'moderate',
+    current_year: int = 2025,
+    projection_year: int = 2040,
+    polyhouse: bool = True,
+) -> Dict:
+    """Climate change impact on mushroom growing windows 2025-2040.
+    Sources: Thai Meteorological Dept, IPCC AR6, SEA START RC."""
+
+    regions = {
+        'isaan': {'name': 'Isaan (Northeast)', 'current_avg_temp': [22, 24, 28, 30, 29, 28, 27, 27, 27, 26, 24, 22],
+                  'current_growing_months': 5, 'rainy_months': [5, 6, 7, 8, 9, 10]},
+        'central': {'name': 'Central Plains', 'current_avg_temp': [26, 28, 30, 31, 30, 29, 29, 28, 28, 27, 27, 26],
+                    'current_growing_months': 7, 'rainy_months': [5, 6, 7, 8, 9, 10]},
+        'north': {'name': 'Northern (Chiang Mai)', 'current_avg_temp': [20, 22, 26, 28, 27, 26, 26, 25, 25, 24, 22, 20],
+                  'current_growing_months': 4, 'rainy_months': [5, 6, 7, 8, 9]},
+        'south': {'name': 'Southern', 'current_avg_temp': [27, 27, 28, 28, 28, 28, 27, 27, 27, 27, 27, 27],
+                  'current_growing_months': 10, 'rainy_months': [4, 5, 6, 7, 8, 9, 10, 11]},
+    }
+
+    scenarios = {
+        'optimistic': {'name': 'SSP1-2.6 (Best case)', 'temp_rise_per_decade': 0.15, 'rainfall_change_pct': -3},
+        'moderate': {'name': 'SSP2-4.5 (Middle road)', 'temp_rise_per_decade': 0.25, 'rainfall_change_pct': -5},
+        'severe': {'name': 'SSP5-8.5 (Worst case)', 'temp_rise_per_decade': 0.40, 'rainfall_change_pct': -10},
+    }
+
+    reg = regions[region]
+    sc = scenarios[scenario]
+    decades = (projection_year - current_year) / 10
+
+    temp_rise = sc['temp_rise_per_decade'] * decades
+    polyhouse_bonus = 4 if polyhouse else 0
+
+    # V. volvacea: 28-35°C optimal, >25°C needed
+    # P. ostreatus: 20-30°C optimal, >15°C needed
+    min_temp_volvacea = 25
+    min_temp_ostreatus = 15
+
+    # Project monthly temps
+    current_temps = reg['current_avg_temp']
+    projected_temps = [t + temp_rise for t in current_temps]
+    polyhouse_temps = [t + polyhouse_bonus for t in projected_temps]
+
+    # Count growing months
+    def count_months(temps, min_t):
+        return sum(1 for t in temps if t >= min_t)
+
+    months_data = []
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    for i in range(12):
+        months_data.append({
+            'month': month_names[i],
+            'current_temp': current_temps[i],
+            'projected_temp': round(projected_temps[i], 1),
+            'polyhouse_temp': round(polyhouse_temps[i], 1) if polyhouse else None,
+            'straw_ok_current': current_temps[i] >= min_temp_volvacea,
+            'straw_ok_projected': projected_temps[i] >= min_temp_volvacea,
+            'oyster_ok_current': current_temps[i] >= min_temp_ostreatus,
+            'oyster_ok_projected': (polyhouse_temps[i] if polyhouse else projected_temps[i]) >= min_temp_ostreatus,
+            'is_rainy': (i + 1) in reg['rainy_months'],
+        })
+
+    current_straw_months = count_months(current_temps, min_temp_volvacea)
+    projected_straw_months = count_months(projected_temps, min_temp_volvacea)
+    current_oyster_months = count_months([t + polyhouse_bonus for t in current_temps] if polyhouse else current_temps, min_temp_ostreatus)
+    projected_oyster_months = count_months(polyhouse_temps if polyhouse else projected_temps, min_temp_ostreatus)
+
+    # Rainfall
+    projected_rainfall_pct = sc['rainfall_change_pct'] * decades / 10
+
+    # Revenue impact
+    current_cycles = min(current_oyster_months, 8)  # max 8 cycles
+    projected_cycles = min(projected_oyster_months, 8)
+    cycle_change = projected_cycles - current_cycles
+
+    return {
+        'region': reg['name'],
+        'scenario': sc['name'],
+        'temp_rise': round(temp_rise, 1),
+        'projection_year': projection_year,
+        'months_data': months_data,
+        'growing_season': {
+            'straw_current': current_straw_months,
+            'straw_projected': projected_straw_months,
+            'oyster_current': current_oyster_months,
+            'oyster_projected': projected_oyster_months,
+        },
+        'cycles': {
+            'current': current_cycles,
+            'projected': projected_cycles,
+            'change': cycle_change,
+        },
+        'rainfall_change_pct': round(projected_rainfall_pct, 1),
+        'adaptation': {
+            'polyhouse': '+4°C buffer extends season by 2-3 months',
+            'oyster_advantage': 'P. ostreatus tolerates 15°C vs V. volvacea 25°C — much more resilient',
+            'water_storage': f'Rainfall may drop {abs(round(projected_rainfall_pct, 1))}% — rainwater harvesting essential',
+            'heat_stress': 'Above 35°C reduces yield — shade cloth + misting helps',
+        },
+        'verdict': 'Warming HELPS mushroom growing season' if cycle_change >= 0 else 'Warming REDUCES growing season — adaptation needed',
+    }
+
+
+# ── LAB 46: LABOR ALLOCATION MODEL ──
+def compute_labor_allocation(
+    cooperative_size: int = 10,
+    n_bags: int = 800,
+    cycles_per_year: int = 5,
+    vertical_tiers: int = 4,
+    has_solar_drying: bool = True,
+    has_ecommerce: bool = True,
+    has_spawn_lab: bool = False,
+    family_workers: int = 2,
+    hired_workers: int = 0,
+    daily_wage: float = 370,
+) -> Dict:
+    """Labor allocation model — who does what, hours per task, family vs hired.
+    Sources: Thai agricultural labor studies, farmer surveys."""
+
+    # Tasks and time per cycle (hours)
+    tasks = {
+        'substrate_prep': {'name': '🌾 Substrate Prep', 'hours_per_cycle': n_bags * 0.03, 'skill': 'Low', 'when': 'Start of cycle'},
+        'pasteurization': {'name': '🧪 Lime Pasteurization', 'hours_per_cycle': n_bags * 0.01, 'skill': 'Low', 'when': 'Day 1-2'},
+        'bagging_spawning': {'name': '📦 Bagging & Spawning', 'hours_per_cycle': n_bags * 0.05, 'skill': 'Medium', 'when': 'Day 2-3'},
+        'incubation_care': {'name': '🌡️ Incubation Monitoring', 'hours_per_cycle': 30 * 0.5, 'skill': 'Low', 'when': 'Day 3-33 (30 days)'},
+        'harvest': {'name': '🍄 Harvesting', 'hours_per_cycle': n_bags * 0.02 * 3, 'skill': 'Low', 'when': '3 flushes over 3 weeks'},
+        'watering': {'name': '💧 Misting/Watering', 'hours_per_cycle': 30 * 0.5, 'skill': 'Low', 'when': 'Daily during fruiting'},
+        'rack_maintenance': {'name': '🏗️ Rack Maintenance', 'hours_per_cycle': 4, 'skill': 'Low', 'when': 'Between cycles'},
+    }
+
+    if has_solar_drying:
+        tasks['drying'] = {'name': '🌞 Solar Drying', 'hours_per_cycle': n_bags * 0.015, 'skill': 'Low', 'when': 'Post-harvest'}
+        tasks['packaging'] = {'name': '📦 Packaging & Labeling', 'hours_per_cycle': n_bags * 0.01, 'skill': 'Medium', 'when': 'Post-drying'}
+
+    if has_ecommerce:
+        tasks['ecommerce'] = {'name': '📱 Online Sales', 'hours_per_cycle': 10, 'skill': 'Medium', 'when': 'Ongoing'}
+        tasks['delivery'] = {'name': '🚗 Delivery/Shipping', 'hours_per_cycle': 8, 'skill': 'Low', 'when': 'Weekly'}
+
+    if has_spawn_lab:
+        tasks['spawn'] = {'name': '🧫 Spawn Production', 'hours_per_cycle': 20, 'skill': 'High', 'when': 'Continuous'}
+
+    # Calculate totals
+    total_hours_cycle = sum(t['hours_per_cycle'] for t in tasks.values())
+    total_hours_year = total_hours_cycle * cycles_per_year
+    total_hours_day = total_hours_year / 300  # ~300 working days
+
+    # Available labor
+    family_hours_day = family_workers * 4  # 4 hrs/day part-time (alongside rice)
+    hired_hours_day = hired_workers * 8  # full-time
+    available_hours_day = family_hours_day + hired_hours_day
+
+    labor_sufficiency = available_hours_day / total_hours_day if total_hours_day > 0 else 999
+
+    # Cost
+    family_labor_cost = 0  # unpaid
+    hired_labor_cost = hired_workers * daily_wage * 300
+    total_labor_cost = hired_labor_cost
+
+    # Task breakdown for output
+    task_list = []
+    for key, t in tasks.items():
+        annual_hours = t['hours_per_cycle'] * cycles_per_year
+        task_list.append({
+            'name': t['name'],
+            'hours_per_cycle': round(t['hours_per_cycle'], 1),
+            'annual_hours': round(annual_hours),
+            'pct_of_total': round(annual_hours / total_hours_year * 100, 1) if total_hours_year > 0 else 0,
+            'skill': t['skill'],
+            'when': t['when'],
+        })
+
+    task_list.sort(key=lambda x: x['annual_hours'], reverse=True)
+
+    return {
+        'total_hours_per_cycle': round(total_hours_cycle, 1),
+        'total_hours_per_year': round(total_hours_year),
+        'avg_hours_per_day': round(total_hours_day, 1),
+        'tasks': task_list,
+        'labor': {
+            'family_workers': family_workers,
+            'family_hours_day': family_hours_day,
+            'hired_workers': hired_workers,
+            'hired_hours_day': hired_hours_day,
+            'available_hours_day': available_hours_day,
+            'needed_hours_day': round(total_hours_day, 1),
+            'sufficiency_pct': round(labor_sufficiency * 100, 1),
+            'verdict': '✅ Sufficient' if labor_sufficiency >= 1 else f'⚠️ Need {round(total_hours_day - available_hours_day, 1)} more hrs/day',
+        },
+        'costs': {
+            'family': 0,
+            'hired': round(hired_labor_cost),
+            'total': round(total_labor_cost),
+            'cost_per_kg': round(total_labor_cost / (n_bags * 2.5 * 0.25 * cycles_per_year), 2) if n_bags > 0 else 0,
+        },
+    }

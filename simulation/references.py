@@ -577,6 +577,18 @@ LAB_REFERENCES = {
         {"title": "Farmer Adoption S-Curve Model — Training Quality Impact", "source": "Zero-Burn Lab Internal", "url": "#", "explanation": "Internal simulation: training quality is the #1 adoption driver. Good training → 50% adoption by Y5. Poor training → 20% by Y5."},
         {"title": "BAAC Micro-Loan Programs for Agricultural Cooperatives", "source": "BAAC Thailand", "url": "https://www.baac.or.th/", "explanation": "BAAC offers 4.5% agricultural loans for cooperatives. Payback typically < 6 months for mushroom equipment investment."},
     ],
+    "💧 Water & Humidity": [
+        {"title": "Humidity Control for Oyster Mushroom Cultivation", "source": "FAO / GroCycle", "url": "https://grocycle.com/", "explanation": "Optimal 80-90% RH with 4-6 air exchanges/hr. Below 80% caps dry out (30-50% yield loss). Above 95% bacterial blotch risk."},
+        {"title": "Rainwater Harvesting for Small-Scale Agriculture in Thailand", "source": "Thai Royal Irrigation Dept", "url": "https://www.rid.go.th/", "explanation": "30m² roof at 1,200mm/yr collects ~28.8m³. Covers most mushroom farm water needs at zero cost."},
+    ],
+    "🌡️ Climate Resilience": [
+        {"title": "IPCC AR6 Southeast Asia Temperature Projections", "source": "IPCC / SEA START RC", "url": "https://www.ipcc.ch/", "explanation": "SSP2-4.5: +0.25°C/decade. SSP5-8.5: +0.4°C/decade. Southeast Asia warming faster than global average."},
+        {"title": "Thai Meteorological Department — Regional Climate Data", "source": "Thai Met Dept", "url": "https://www.tmd.go.th/", "explanation": "Monthly averages by region. Isaan Jan 22°C, Apr 30°C. Central 2-4°C warmer. Polyhouse adds +4°C buffer."},
+    ],
+    "👷 Labor Allocation": [
+        {"title": "Labor Requirements for Small-Scale Mushroom Farming", "source": "FAO Agricultural Labour", "url": "https://www.fao.org/", "explanation": "Typical mushroom farm: 3-5 hrs/day part-time. Bagging & spawning is most labor-intensive (0.05h/bag). Harvesting: 0.02h/bag per flush."},
+        {"title": "Thai Agricultural Minimum Wage 2025", "source": "Thai Ministry of Labour", "url": "https://www.mol.go.th/", "explanation": "Minimum wage ฿370/day (฿46.25/hr). Family labor is unpaid — the key economic advantage for small farmers."},
+    ],
 }
 
 
