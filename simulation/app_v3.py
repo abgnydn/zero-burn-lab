@@ -1,6 +1,6 @@
 """
-Zero-Burn Blueprint — Advanced Labs v3.0 (Complete)
-15 Streamlit labs: Round 1 (Physics) + Round 2 (Biology) + Round 3 (Environment) + Round 4 (Economics)
+Zero-Burn Blueprint — Advanced Labs v4.0
+46 Streamlit labs across 11 research rounds + Pilot Program
 Run with: source .venv/bin/activate && cd simulation && streamlit run app_v3.py
 """
 import streamlit as st
