@@ -28,6 +28,8 @@ from engines_v3 import (
     compute_biochar_carbon_credits,
     compute_enzymatic_pretreatment, compute_mycelium_materials,
     compute_drone_operations, compute_cold_pasteurization,
+    compute_solar_drying, compute_vertical_tiers, compute_spawn_production,
+    compute_ecommerce_channels, compute_solar_energy, compute_beta_glucan,
     DEFAULT_TUBE_ID, DEFAULT_TUBE_OD, DEFAULT_COIL_DIAM,
 )
 from references import render_references
@@ -98,11 +100,18 @@ lab = st.sidebar.radio("Select Lab:", [
     "─── Round 9: Drone Tech ───",
     "🛸 Drone Operations & ROI",
     "🧪 Drone Cold Pasteurization",
+    "─── Round 10: Value-Added ───",
+    "🌞 Solar Drying & Products",
+    "🏗️ Vertical Multi-Tier",
+    "🧫 Spawn Self-Production",
+    "📱 E-Commerce Channels",
+    "☀️ Solar Energy Integration",
+    "🧬 Beta-Glucan Supplements",
 ], index=0)
 
 st.sidebar.divider()
-st.sidebar.caption("v3.5 — All 9 Research Rounds")
-st.sidebar.caption("Physics • Biology • Env • Econ • Tech • Risk • Health • Breakthrough • Drones")
+st.sidebar.caption("v3.6 — All 10 Research Rounds")
+st.sidebar.caption("Physics • Biology • Env • Econ • Tech • Risk • Health • Break • Drones • Value")
 
 
 # ================================================================
@@ -2632,3 +2641,362 @@ elif lab == "🧪 Drone Cold Pasteurization":
                 """)
 
     render_references("🧪 Drone Cold Pasteurization")
+
+
+# ================================================================
+# ROUND 10: VALUE-ADDED & OPTIMIZATION LABS
+# ================================================================
+    render_references("🧪 Drone Cold Pasteurization")
+
+elif lab == "🌞 Solar Drying & Products":
+    st.title("🌞 Solar Drying & Value-Added Products Lab")
+    st.markdown("*Turn ฿60/kg fresh mushrooms into ฿400-600/kg dried products. Solar dryer + Thai sunshine.*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️ Settings")
+        harvest = st.slider("Annual harvest (kg/farmer)", 200, 3000, 1000, key="sd_h")
+        pf = st.slider("% sell fresh", 10, 90, 50, key="sd_f")
+        pd_ = st.slider("% dry", 5, 60, 35, key="sd_d")
+        pp = st.slider("% powder", 0, 40, 15, key="sd_p")
+        dp = st.slider("Dried price ฿/kg", 200, 800, 400, key="sd_dp")
+        coop = st.slider("Cooperative size", 1, 30, 10, key="sd_c")
+
+    r = compute_solar_drying(annual_harvest_kg=harvest, pct_fresh=pf, pct_dried=pd_, pct_powder=pp, dried_price=dp, cooperative_size=coop)
+
+    with col2:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("💰 Revenue Gain", f"฿{r['revenue_gain']:,.0f}/yr")
+        with m2:
+            st.metric("📈 Revenue Multiplier", f"{r['revenue_multiplier']}×")
+        with m3:
+            st.metric("🌞 Net Benefit", f"฿{r['net_benefit']:,.0f}/yr")
+        with m4:
+            st.metric("⏱️ Payback", f"{r['payback_months']} months")
+
+        st.divider()
+        tabs = st.tabs(["📊 Revenue Split", "💰 Cost Analysis", "📦 Product Details"])
+
+        with tabs[0]:
+            names = ['🍄 Fresh', '🌿 Dried', '💊 Powder']
+            values = [r['products']['fresh']['revenue'], r['products']['dried']['revenue'], r['products']['powder']['revenue']]
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=names, y=values, marker_color=['#10b981', '#f59e0b', '#8b5cf6'],
+                                text=[f'฿{v:,.0f}' for v in values], textposition='outside'))
+            fig.add_hline(y=r['baseline_revenue'], line_dash="dash", line_color="red",
+                         annotation_text=f"All-fresh baseline: ฿{r['baseline_revenue']:,.0f}")
+            fig.update_layout(title='Revenue by Product Type', height=350, template='plotly_white', yaxis_title='Thai Baht (฿)')
+            st.plotly_chart(fig, use_container_width=True)
+
+        with tabs[1]:
+            c = r['costs']
+            st.markdown(f"""
+| Cost | Amount |
+|------|--------|
+| 🌞 Solar dryer (annual) | ฿{c['dryer_annual']:,.0f} |
+| 📦 Packaging | ฿{c['packaging']:,.0f} |
+| 👷 Labor | ฿{c['labor']:,.0f} |
+| **Total** | **฿{c['total']:,.0f}** |
+| **Per farmer benefit** | **฿{r['per_farmer']:,.0f}/yr** |
+            """)
+
+        with tabs[2]:
+            p = r['products']
+            st.markdown(f"""
+| Product | Input | Output | Price/kg | Revenue | Shelf Life |
+|---------|-------|--------|----------|---------|------------|
+| 🍄 Fresh | {p['fresh']['kg']:,} kg | {p['fresh']['kg']:,} kg | ฿60 | ฿{p['fresh']['revenue']:,} | 5 days |
+| 🌿 Dried | {p['dried']['kg_input']:,} kg | {p['dried']['kg_output']:,} kg | ฿{dp} | ฿{p['dried']['revenue']:,} | 12 months |
+| 💊 Powder | {p['powder']['kg_input']:,} kg | {p['powder']['kg_output']:,} kg | ฿600 | ฿{p['powder']['revenue']:,} | 18 months |
+            """)
+            st.info("💡 **10 kg fresh = 1 kg dried** (mushrooms are 90% water). The price/kg jumps 5-10×!")
+
+    render_references("🌞 Solar Drying & Products")
+
+
+elif lab == "🏗️ Vertical Multi-Tier":
+    st.title("🏗️ Vertical Multi-Tier Cultivation Lab")
+    st.markdown("*Stack 4-6 tiers of bags → 4-6× more mushrooms in the same polyhouse.*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️ Settings")
+        m2 = st.slider("Polyhouse size (m²)", 10, 60, 20, key="vt_m2")
+        tiers = st.slider("Number of tiers", 1, 8, 4, key="vt_t")
+        be = st.slider("BE %", 10, 40, 25, key="vt_be")
+        cyc = st.slider("Cycles/year", 3, 8, 5, key="vt_cy")
+        price = st.slider("Mushroom price ฿/kg", 30, 120, 60, key="vt_p")
+        coop = st.slider("Cooperative size", 1, 30, 10, key="vt_c")
+
+    r = compute_vertical_tiers(polyhouse_m2=m2, n_tiers=tiers, be_pct=be, cycles_per_year=cyc, mushroom_price=price, cooperative_size=coop)
+
+    with col2:
+        m1, m2c, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("📦 Bags (1-tier → multi)", f"{r['baseline']['bags']} → {r['multi_tier']['bags']}")
+        with m2c:
+            st.metric("🍄 Extra Revenue", f"฿{r['extra_revenue']:,.0f}/yr")
+        with m3:
+            st.metric("💵 Net Benefit", f"฿{r['net_benefit']:,.0f}/yr")
+        with m4:
+            st.metric("⏱️ Payback", f"{r['payback_months']} months")
+
+        st.divider()
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=['Single Layer', f'{tiers}-Tier'], y=[r['baseline']['yield_annual_kg'], r['multi_tier']['yield_annual_kg']],
+                                marker_color=['#ef4444', '#10b981'], text=[f"{r['baseline']['yield_annual_kg']:,} kg", f"{r['multi_tier']['yield_annual_kg']:,} kg"],
+                                textposition='outside'))
+            fig.update_layout(title='Annual Yield (kg)', height=350, template='plotly_white')
+            st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            st.markdown(f"""
+### 💰 Economics
+| Metric | Value |
+|--------|-------|
+| Shelf investment | ฿{r['costs']['shelf_investment']:,.0f} |
+| Extra substrate cost/yr | ฿{r['costs']['extra_substrate']:,.0f} |
+| Extra spawn cost/yr | ฿{r['costs']['extra_spawn']:,.0f} |
+| **Extra revenue** | **฿{r['extra_revenue']:,.0f}** |
+| **Net benefit/farmer** | **฿{r['per_farmer']:,.0f}/yr** |
+| Yield per m² | **{r['yield_per_m2']} kg/m²/yr** |
+| Cooperative total | **฿{r['coop_benefit']:,.0f}/yr** |
+            """)
+            st.success(f"🏆 {tiers} tiers = **{r['yield_multiplier']}× more mushrooms** in the same space!")
+
+    render_references("🏗️ Vertical Multi-Tier")
+
+
+elif lab == "🧫 Spawn Self-Production":
+    st.title("🧫 Spawn Self-Production Lab")
+    st.markdown("*DIY grain spawn cuts recurring costs by 85-90%. One person supplies the whole cooperative.*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️ Settings")
+        bags = st.slider("Annual bags/farmer", 500, 5000, 2000, key="sp_b")
+        buy_price = st.slider("Bought spawn ฿/bag", 5, 30, 15, key="sp_bp")
+        coop = st.slider("Cooperative size", 1, 30, 10, key="sp_c")
+
+    r = compute_spawn_production(annual_bags=bags, bought_spawn_price_per_bag=buy_price, cooperative_size=coop)
+
+    with col2:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("💰 Annual Savings", f"฿{r['savings']:,.0f}")
+        with m2:
+            st.metric("📉 Cost Reduction", f"{r['savings_pct']}%")
+        with m3:
+            st.metric("👤 Per Farmer", f"฿{r['per_farmer']:,.0f}/yr")
+        with m4:
+            st.metric("⏱️ Payback", f"{r['payback_months']} months")
+
+        st.divider()
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=['🛒 Buying Spawn', '🧫 DIY Spawn'],
+                                y=[r['buying']['annual_cost'], r['diy']['annual_cost']],
+                                marker_color=['#ef4444', '#10b981'],
+                                text=[f"฿{r['buying']['annual_cost']:,}", f"฿{r['diy']['annual_cost']:,}"],
+                                textposition='outside'))
+            fig.update_layout(title='Annual Spawn Cost Comparison', height=350, template='plotly_white')
+            st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            d = r['diy']
+            st.markdown(f"""
+### 🧫 DIY Cost Breakdown
+| Component | Annual Cost |
+|-----------|------------|
+| 🌾 Grain | ฿{d['grain_cost']:,.0f} |
+| 🔬 Lab depreciation | ฿{d['lab_annual']:,.0f} |
+| 🔧 Equipment depreciation | ฿{d['equipment_annual']:,.0f} |
+| 📦 Consumables | ฿{d['consumables']:,.0f} |
+| 👷 Labor | ฿{d['labor']:,.0f} |
+| **Total** | **฿{d['annual_cost']:,.0f}** |
+| **Cost/bag** | **฿{d['cost_per_bag']}** (vs ฿{buy_price} bought) |
+            """)
+
+        st.warning(f"⚠️ **Training required:** {r['risks']['skill_required']}. Contamination risk: {r['risks']['contamination_risk']}.")
+
+    render_references("🧫 Spawn Self-Production")
+
+
+elif lab == "📱 E-Commerce Channels":
+    st.title("📱 E-Commerce Channels Lab")
+    st.markdown("*Shopee, Lazada, LINE — sell dried/fresh/grow kits at 3-8× wet market prices.*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️ Channels")
+        harvest = st.slider("Annual harvest kg/farmer", 200, 3000, 1000, key="ec_h")
+        pw = st.slider("% wet market", 10, 80, 50, key="ec_w")
+        po = st.slider("% Shopee/Lazada", 5, 50, 25, key="ec_o")
+        pl = st.slider("% LINE direct", 5, 40, 15, key="ec_l")
+        pk = st.slider("% grow kits", 0, 30, 10, key="ec_k")
+        coop = st.slider("Cooperative size", 1, 30, 10, key="ec_c")
+
+    r = compute_ecommerce_channels(annual_harvest_kg=harvest, pct_wet_market=pw, pct_shopee_lazada=po, pct_line_direct=pl, pct_grow_kits=pk, cooperative_size=coop)
+
+    with col2:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("💰 Extra Revenue", f"฿{r['benefit']:,.0f}/yr")
+        with m2:
+            st.metric("📊 Blended Price", f"฿{r['blended_price_per_kg']}/kg")
+        with m3:
+            st.metric("👤 Per Farmer", f"฿{r['per_farmer']:,.0f}/yr")
+        with m4:
+            st.metric("⏱️ Payback", f"{r['payback_days']} days")
+
+        st.divider()
+        names = [c['name'] for c in r['channels']]
+        revs = [c['revenue'] for c in r['channels']]
+        ppkg = [c['price_per_kg'] for c in r['channels']]
+
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=names, y=revs, marker_color=['#6b7280', '#f59e0b', '#10b981', '#8b5cf6'],
+                                text=[f'฿{v:,}' for v in revs], textposition='outside'))
+            fig.update_layout(title='Revenue by Channel', height=350, template='plotly_white')
+            st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            fig2 = go.Figure()
+            fig2.add_trace(go.Bar(x=names, y=ppkg, marker_color=['#6b7280', '#f59e0b', '#10b981', '#8b5cf6'],
+                                 text=[f'฿{v}' for v in ppkg], textposition='outside'))
+            fig2.update_layout(title='Effective Price per kg by Channel', height=350, template='plotly_white')
+            st.plotly_chart(fig2, use_container_width=True)
+
+        st.markdown(f"""
+| Channel | Volume | Revenue | ฿/kg |
+|---------|--------|---------|------|""" + "".join([f"\n| {c['name']} | {c['kg']:,} kg | ฿{c['revenue']:,} | ฿{c['price_per_kg']} |" for c in r['channels']]) + f"""
+| **Total** | | **฿{r['total_revenue']:,}** | **฿{r['blended_price_per_kg']}** |
+        """)
+
+    render_references("📱 E-Commerce Channels")
+
+
+elif lab == "☀️ Solar Energy Integration":
+    st.title("☀️ Solar Energy Integration Lab")
+    st.markdown("*Solar panels power fans, dryers, and pumps — sell surplus to the grid at ฿2.70/kWh.*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️ System")
+        kw = st.slider("System size (kW)", 1, 15, 3, key="se_kw")
+        sun = st.slider("Daily sun hours", 3.0, 7.0, 5.5, step=0.5, key="se_sun")
+        self_pct = st.slider("Self-consumption %", 30, 100, 70, key="se_sp")
+        coop = st.slider("Cooperative size", 1, 30, 10, key="se_c")
+
+    r = compute_solar_energy(system_kw=kw, daily_sun_hours=sun, self_consumption_pct=self_pct, cooperative_size=coop)
+
+    with col2:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("⚡ Annual Generation", f"{r['annual_generation_kwh']:,} kWh")
+        with m2:
+            st.metric("💰 Annual Savings", f"฿{r['annual_benefit']:,.0f}")
+        with m3:
+            st.metric("🔋 Self-Sufficiency", f"{r['self_sufficiency_pct']}%")
+        with m4:
+            st.metric("⏱️ Payback", f"{r['payback_years']} years")
+
+        st.divider()
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=['💡 Self-Use Savings', '🔌 Grid Sales', '📋 Tax Benefit'],
+                                y=[r['self_consumption']['savings'], r['grid_surplus']['income'], r['tax_benefit']],
+                                marker_color=['#10b981', '#3b82f6', '#f59e0b']))
+            fig.update_layout(title='Annual Benefits Breakdown', height=350, template='plotly_white', yaxis_title='฿')
+            st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            st.markdown(f"""
+### ☀️ System Economics
+| Metric | Value |
+|--------|-------|
+| System cost | ฿{r['total_cost']:,.0f} |
+| Annual generation | {r['annual_generation_kwh']:,} kWh |
+| Self-use savings | ฿{r['self_consumption']['savings']:,.0f}/yr |
+| Grid sales income | ฿{r['grid_surplus']['income']:,.0f}/yr |
+| Tax deduction benefit | ฿{r['tax_benefit']:,.0f} (one-time) |
+| **25-year total benefit** | **฿{r['total_25yr_benefit']:,.0f}** |
+| Farm demand coverage | **{r['self_sufficiency_pct']}%** |
+            """)
+
+        st.subheader("🔌 Farm Energy Uses")
+        uses = r['farm_uses']
+        use_names = ['🌀 Ventilation', '🌞 Dryer Fan', '💡 LED Lights', '💧 Water Pump']
+        use_kwh = [uses['ventilation_fans']['annual_kwh'], uses['solar_dryer_fan']['annual_kwh'],
+                   uses['led_grow_lights']['annual_kwh'], uses['water_pump']['annual_kwh']]
+        fig3 = go.Figure(data=[go.Pie(labels=use_names, values=use_kwh, hole=0.4)])
+        fig3.update_layout(title=f'Farm Energy Demand ({r["farm_demand_kwh"]:,} kWh/yr)', height=300)
+        st.plotly_chart(fig3, use_container_width=True)
+
+    render_references("☀️ Solar Energy Integration")
+
+
+elif lab == "🧬 Beta-Glucan Supplements":
+    st.title("🧬 Beta-Glucan Supplement Lab")
+    st.markdown("*P. ostreatus has 23-25% beta-glucan. Extract and sell at ฿1,500-5,500/kg wholesale.*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️ Settings")
+        harvest = st.slider("Annual mushroom kg (coop)", 5000, 30000, 10000, key="bg_h")
+        pct = st.slider("% for extraction", 5, 50, 20, key="bg_p")
+        mode = st.selectbox("Sales model", ['wholesale', 'retail'], format_func=lambda x: '🏭 Wholesale powder' if x == 'wholesale' else '💊 Retail capsules', key="bg_m")
+        bg_price = st.slider("Beta-glucan ฿/kg", 500, 5000, 1500, key="bg_pr")
+        coop = st.slider("Cooperative size", 1, 30, 10, key="bg_c")
+
+    r = compute_beta_glucan(annual_mushroom_kg=harvest, pct_for_extraction=pct, sell_mode=mode, beta_glucan_price_per_kg=bg_price, cooperative_size=coop)
+
+    with col2:
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("🧬 Beta-Glucan Output", f"{r['beta_glucan_kg']} kg/yr")
+        with m2:
+            st.metric("💰 Revenue", f"฿{r['revenue']:,.0f}/yr")
+        with m3:
+            st.metric("💵 Profit", f"฿{r['profit']:,.0f}/yr")
+        with m4:
+            st.metric("⏱️ Payback", f"{r['payback_years']} years")
+
+        st.divider()
+        c1, c2 = st.columns(2)
+        with c1:
+            costs = r['costs']
+            labels = [k for k, v in costs.items() if k != 'total' and v > 0]
+            values = [v for k, v in costs.items() if k != 'total' and v > 0]
+            fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.4)])
+            fig.update_layout(title=f'Cost Breakdown (฿{costs["total"]:,}/yr)', height=350)
+            st.plotly_chart(fig, use_container_width=True)
+        with c2:
+            st.markdown(f"""
+### 🔬 Production Pipeline
+| Stage | Value |
+|-------|-------|
+| Fresh mushroom input | {r['input_fresh_kg']:,} kg |
+| After drying (10:1) | {r['dried_kg']:,} kg |
+| Beta-glucan extracted (8%) | **{r['beta_glucan_kg']} kg** |
+| Sales model | {'Wholesale powder' if mode == 'wholesale' else f"Retail: {r['n_bottles']:,} bottles"} |
+| Revenue | **฿{r['revenue']:,.0f}** |
+| Total costs | ฿{costs['total']:,.0f} |
+| **Net profit** | **฿{r['profit']:,.0f}/yr** |
+| Investment required | ฿{r['total_investment']:,.0f} |
+            """)
+
+        st.markdown(f"""
+### 🧬 The Science
+- **Extraction method:** {r['science']['extraction_method']}
+- **P. ostreatus beta-glucan content:** {r['science']['pleurotus_beta_glucan_pct']}
+- **Why oyster mushroom:** {r['science']['oyster_advantage']}
+
+> ⚠️ **Phase 3+ optimization** — requires FDA registration (฿50K), lab equipment (฿250K), and trained operator.
+> Consider **partnership with existing Thai supplement companies** to reduce capital requirements.
+        """)
+
+    render_references("🧬 Beta-Glucan Supplements")

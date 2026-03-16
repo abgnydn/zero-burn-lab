@@ -549,6 +549,30 @@ LAB_REFERENCES = {
             "explanation": "Submerge straw in water 7-14 days. Anaerobic bacteria kill aerobic competitors. Zero energy, zero chemicals.",
         },
     ],
+    "🌞 Solar Drying & Products": [
+        {"title": "Thai Dried Oyster Mushroom Wholesale Prices", "source": "Tridge", "url": "https://tridge.com/", "explanation": "Dried oyster mushrooms wholesale at ฿308-481/kg in Thailand vs ฿60/kg fresh. 5-8× price premium."},
+        {"title": "Greenhouse Solar Dryer for Small-Scale Farmers in Thailand", "source": "TCI-THAIJO", "url": "https://tci-thaijo.org/", "explanation": "Solar dryer costs ~$1,500 USD (฿52K), produces 3,600 kg/yr, payback ~1 year."},
+    ],
+    "🏗️ Vertical Multi-Tier": [
+        {"title": "Vertical Oyster Mushroom Farming — Yield per m²", "source": "WikiFarmer / Veshenka-Expert", "url": "https://wikifarmer.com/", "explanation": "4-8 tier racks yield 18.5 kg/m² (25% BE). Standard bags: 2.5 kg mushroom per 10 kg bag over 2 flushes."},
+        {"title": "Multi-Tier Rack Systems for Commercial Mushroom Production", "source": "CultivationAg", "url": "https://cultivationag.com/", "explanation": "Vertical farming 3-4× yield in same footprint. Oyster mushrooms ideal — thrive in dark, humid vertical environments."},
+    ],
+    "🧫 Spawn Self-Production": [
+        {"title": "DIY Grain Spawn Production — Equipment & Cost Guide", "source": "GroCycle / LivingWebFarms", "url": "https://grocycle.com/", "explanation": "DIY spawn: $2-4/bag vs $20-30 bought. Setup: pressure cooker + SAB + grain. 85-90% cost reduction."},
+        {"title": "Small-Scale Mushroom Spawn Laboratory Setup", "source": "BellaBora", "url": "https://bellabora.com/", "explanation": "50 sq ft dedicated space, sterile technique training (2-3 days), can clone local high-performing strains."},
+    ],
+    "📱 E-Commerce Channels": [
+        {"title": "Premium Mushroom Sales on Thai E-Commerce Platforms", "source": "Shopee / Lazada Thailand", "url": "https://shopee.co.th/", "explanation": "Fresh premium mushrooms ฿190-200/kg, dried shiitake ฿308/kg, grow kits ฿199-299 each on Thai platforms."},
+        {"title": "Earthling Mushroom Farm — Bangkok Direct-to-Consumer Model", "source": "Earthling Mushroom Farm", "url": "https://earthlingmushroomfarm.com/", "explanation": "Lion's Mane ฿190, Pink Oyster ฿200, mixed box ฿200. Shows premium pricing is achievable in Thai market."},
+    ],
+    "☀️ Solar Energy Integration": [
+        {"title": "Solar Panel Systems Cost in Thailand 2025", "source": "Namsang Solar", "url": "https://namsang.co.th/", "explanation": "3kW: ฿90-120K, 5kW: ฿130-180K, 10kW: ฿250-320K. Feed-in tariff ฿2.70/kWh guaranteed 10 years."},
+        {"title": "Thailand Solar Agricultural Water Pump Subsidy Program", "source": "PRD Thailand", "url": "https://prd.go.th/", "explanation": "Government program for 700,000+ rai. Tax deduction up to ฿200,000 for solar installation."},
+    ],
+    "🧬 Beta-Glucan Supplements": [
+        {"title": "Beta-Glucan Content in Thai Pleurotus ostreatus", "source": "Asian Journal of Applied Biochemistry", "url": "https://asianjab.com/", "explanation": "P. ostreatus yields 23-25% beta-glucan by dry weight using alkaline extraction. Schizophyllum commune: 49%."},
+        {"title": "Beta-Glucan Wholesale Pricing in Thailand", "source": "QualityPlus Thailand", "url": "https://qualityplus.co.th/", "explanation": "Yeast-derived beta-glucan: ฿1,524-5,564/kg wholesale. Mushroom-derived commands premium pricing."},
+    ],
 }
 
 

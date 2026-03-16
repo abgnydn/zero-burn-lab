@@ -3788,3 +3788,440 @@ def _compare_all_methods(total_straw, total_water, be_pct, price, labor_rate, co
         })
     
     return results
+
+
+# ================================================================
+# ROUND 10: VALUE-ADDED & OPTIMIZATION ENGINES (Labs 37-42)
+# ================================================================
+
+# ── LAB 37: SOLAR DRYING & VALUE-ADDED ──
+def compute_solar_drying(
+    annual_harvest_kg: float = 1000,
+    pct_fresh: float = 50,
+    pct_dried: float = 35,
+    pct_powder: float = 15,
+    fresh_price: float = 60,
+    dried_price: float = 400,
+    powder_price: float = 600,
+    dryer_cost: float = 52000,
+    dryer_lifespan: int = 10,
+    cooperative_size: int = 10,
+) -> Dict:
+    """Solar drying ROI — fresh vs dried vs powder revenue comparison.
+    Sources: Tridge.com Thai prices, tci-thaijo.org solar dryer costs, CGIAR drying ROI."""
+    
+    total_harvest = annual_harvest_kg * cooperative_size
+    
+    fresh_kg = total_harvest * (pct_fresh / 100)
+    to_dry_kg = total_harvest * (pct_dried / 100)
+    to_powder_kg = total_harvest * (pct_powder / 100)
+    
+    # Fresh mushrooms are 90% water → 10:1 drying ratio
+    dried_kg = to_dry_kg / 10
+    powder_kg = to_powder_kg / 10
+    
+    rev_fresh = fresh_kg * fresh_price
+    rev_dried = dried_kg * dried_price
+    rev_powder = powder_kg * powder_price
+    total_rev = rev_fresh + rev_dried + rev_powder
+    
+    # Baseline: sell everything fresh
+    baseline_rev = total_harvest * fresh_price
+    
+    # Costs
+    annual_dryer_cost = dryer_cost / dryer_lifespan
+    packaging_cost = (dried_kg + powder_kg) * 20  # ฿20/kg for vacuum seal bags
+    labor_cost = (to_dry_kg + to_powder_kg) * 0.5  # ฿0.5/kg sorting + loading
+    total_cost = annual_dryer_cost + packaging_cost + labor_cost
+    
+    benefit = total_rev - baseline_rev - total_cost
+    
+    return {
+        'total_harvest': round(total_harvest),
+        'products': {
+            'fresh': {'kg': round(fresh_kg), 'revenue': round(rev_fresh)},
+            'dried': {'kg_input': round(to_dry_kg), 'kg_output': round(dried_kg), 'revenue': round(rev_dried)},
+            'powder': {'kg_input': round(to_powder_kg), 'kg_output': round(powder_kg), 'revenue': round(rev_powder)},
+        },
+        'total_revenue': round(total_rev),
+        'baseline_revenue': round(baseline_rev),
+        'revenue_gain': round(total_rev - baseline_rev),
+        'revenue_multiplier': round(total_rev / baseline_rev, 2) if baseline_rev > 0 else 0,
+        'costs': {
+            'dryer_annual': round(annual_dryer_cost),
+            'packaging': round(packaging_cost),
+            'labor': round(labor_cost),
+            'total': round(total_cost),
+        },
+        'net_benefit': round(benefit),
+        'per_farmer': round(benefit / cooperative_size) if cooperative_size > 0 else 0,
+        'payback_months': round((dryer_cost / (benefit / 12)) if benefit > 0 else 999, 1),
+        'shelf_life': {'fresh_days': 5, 'dried_months': 12, 'powder_months': 18},
+    }
+
+
+# ── LAB 38: VERTICAL MULTI-TIER CULTIVATION ──
+def compute_vertical_tiers(
+    polyhouse_m2: float = 20,
+    n_tiers: int = 4,
+    bags_per_m2_per_tier: float = 5,
+    bag_weight_kg: float = 2.5,
+    be_pct: float = 25,
+    cycles_per_year: int = 5,
+    mushroom_price: float = 60,
+    shelf_cost_per_tier: float = 500,
+    cooperative_size: int = 10,
+) -> Dict:
+    """Vertical multi-tier bag stacking ROI.
+    Sources: Veshenka-expert.info, WikiFarmer, CultivationAg."""
+    
+    # Baseline: single layer
+    baseline_bags = polyhouse_m2 * bags_per_m2_per_tier * 1
+    baseline_substrate = baseline_bags * bag_weight_kg
+    baseline_yield_cycle = baseline_substrate * (be_pct / 100)
+    baseline_annual = baseline_yield_cycle * cycles_per_year
+    baseline_revenue = baseline_annual * mushroom_price
+    
+    # Multi-tier
+    tier_bags = polyhouse_m2 * bags_per_m2_per_tier * n_tiers
+    tier_substrate = tier_bags * bag_weight_kg
+    tier_yield_cycle = tier_substrate * (be_pct / 100)
+    tier_annual = tier_yield_cycle * cycles_per_year
+    tier_revenue = tier_annual * mushroom_price
+    
+    # Costs
+    shelf_investment = shelf_cost_per_tier * n_tiers * (polyhouse_m2 / 4)  # shelf units per 4m²
+    extra_substrate_cost = (tier_substrate - baseline_substrate) * cycles_per_year * 1  # ฿1/kg straw
+    extra_spawn_cost = (tier_bags - baseline_bags) * cycles_per_year * 3  # ฿3/bag spawn
+    annual_extra_cost = extra_substrate_cost + extra_spawn_cost
+    shelf_annual = shelf_investment / 5  # 5-year depreciation
+    total_extra_annual = annual_extra_cost + shelf_annual
+    
+    extra_revenue = tier_revenue - baseline_revenue
+    net_benefit = extra_revenue - total_extra_annual
+    
+    # Scale to cooperative
+    coop_benefit = net_benefit * cooperative_size
+    coop_investment = shelf_investment * cooperative_size
+    
+    return {
+        'polyhouse_m2': polyhouse_m2,
+        'n_tiers': n_tiers,
+        'baseline': {
+            'bags': round(baseline_bags), 'yield_annual_kg': round(baseline_annual),
+            'revenue': round(baseline_revenue),
+        },
+        'multi_tier': {
+            'bags': round(tier_bags), 'yield_annual_kg': round(tier_annual),
+            'revenue': round(tier_revenue),
+        },
+        'yield_multiplier': round(n_tiers, 1),
+        'extra_revenue': round(extra_revenue),
+        'costs': {
+            'shelf_investment': round(shelf_investment),
+            'shelf_annual': round(shelf_annual),
+            'extra_substrate': round(extra_substrate_cost),
+            'extra_spawn': round(extra_spawn_cost),
+            'total_annual': round(total_extra_annual),
+        },
+        'net_benefit': round(net_benefit),
+        'per_farmer': round(net_benefit),
+        'coop_benefit': round(coop_benefit),
+        'payback_months': round((shelf_investment / (net_benefit / 12)) if net_benefit > 0 else 999, 1),
+        'yield_per_m2': round(tier_annual / polyhouse_m2, 1),
+    }
+
+
+# ── LAB 39: SPAWN SELF-PRODUCTION ──
+def compute_spawn_production(
+    annual_bags: int = 2000,
+    bought_spawn_per_bag: float = 3,
+    bought_spawn_price_per_bag: float = 15,
+    grain_cost_per_kg: float = 12,
+    grain_per_bag: float = 0.3,
+    lab_setup_cost: float = 15000,
+    lab_lifespan: int = 10,
+    pressure_cooker_cost: float = 3000,
+    sab_cost: float = 500,
+    consumables_annual: float = 3000,
+    labor_hours_per_week: float = 4,
+    cooperative_size: int = 10,
+) -> Dict:
+    """DIY spawn production vs buying — cost comparison.
+    Sources: GroCycle, LivingWebFarms, BellaBora."""
+    
+    total_bags = annual_bags * cooperative_size
+    
+    # Buying spawn
+    buy_cost = total_bags * bought_spawn_price_per_bag
+    
+    # DIY spawn
+    grain_cost = total_bags * grain_per_bag * grain_cost_per_kg
+    lab_annual = lab_setup_cost / lab_lifespan
+    equipment_annual = (pressure_cooker_cost + sab_cost) / lab_lifespan
+    labor_annual = labor_hours_per_week * 52 * (370 / 8)  # min wage hourly
+    diy_cost = grain_cost + lab_annual + equipment_annual + consumables_annual + labor_annual
+    
+    savings = buy_cost - diy_cost
+    savings_pct = (savings / buy_cost * 100) if buy_cost > 0 else 0
+    
+    total_investment = lab_setup_cost + pressure_cooker_cost + sab_cost
+    
+    return {
+        'total_bags': total_bags,
+        'buying': {
+            'cost_per_bag': bought_spawn_price_per_bag,
+            'annual_cost': round(buy_cost),
+        },
+        'diy': {
+            'grain_cost': round(grain_cost),
+            'lab_annual': round(lab_annual),
+            'equipment_annual': round(equipment_annual),
+            'consumables': consumables_annual,
+            'labor': round(labor_annual),
+            'annual_cost': round(diy_cost),
+            'cost_per_bag': round(diy_cost / total_bags, 2) if total_bags > 0 else 0,
+        },
+        'savings': round(savings),
+        'savings_pct': round(savings_pct, 1),
+        'per_farmer': round(savings / cooperative_size) if cooperative_size > 0 else 0,
+        'total_investment': total_investment,
+        'payback_months': round((total_investment / (savings / 12)) if savings > 0 else 999, 1),
+        'risks': {
+            'contamination_risk': 'Medium — requires sterile technique training',
+            'skill_required': 'Moderate — 2-3 day training recommended',
+            'space_needed_m2': 5,
+        },
+    }
+
+
+# ── LAB 40: E-COMMERCE CHANNELS ──
+def compute_ecommerce_channels(
+    annual_harvest_kg: float = 1000,
+    pct_wet_market: float = 50,
+    pct_shopee_lazada: float = 25,
+    pct_line_direct: float = 15,
+    pct_grow_kits: float = 10,
+    wet_market_price: float = 60,
+    online_dried_price: float = 400,
+    line_fresh_price: float = 120,
+    grow_kit_price: float = 250,
+    grow_kit_cost: float = 50,
+    packaging_cost_per_order: float = 15,
+    shipping_cost_per_order: float = 40,
+    platform_fee_pct: float = 5,
+    avg_order_kg: float = 0.5,
+    cooperative_size: int = 10,
+) -> Dict:
+    """E-commerce channel ROI — wet market vs online vs direct.
+    Sources: Shopee.co.th, Lazada.co.th, EarthlingMushroomFarm."""
+    
+    total_harvest = annual_harvest_kg * cooperative_size
+    
+    # Wet market (baseline)
+    wet_kg = total_harvest * (pct_wet_market / 100)
+    wet_rev = wet_kg * wet_market_price
+    
+    # Shopee/Lazada (dried products)
+    online_kg = total_harvest * (pct_shopee_lazada / 100)
+    online_dried_output = online_kg / 10  # 10:1 fresh-to-dried
+    online_orders = online_dried_output / avg_order_kg
+    online_gross = online_dried_output * online_dried_price
+    online_fees = online_gross * (platform_fee_pct / 100)
+    online_packaging = online_orders * packaging_cost_per_order
+    online_shipping = online_orders * shipping_cost_per_order
+    online_net = online_gross - online_fees - online_packaging - online_shipping
+    
+    # LINE/Facebook direct (fresh premium)
+    line_kg = total_harvest * (pct_line_direct / 100)
+    line_orders = line_kg / avg_order_kg
+    line_gross = line_kg * line_fresh_price
+    line_packaging = line_orders * packaging_cost_per_order
+    line_shipping = line_orders * shipping_cost_per_order
+    line_net = line_gross - line_packaging - line_shipping
+    
+    # Grow kits
+    kit_kg = total_harvest * (pct_grow_kits / 100)
+    n_kits = kit_kg / 1  # 1kg substrate per kit
+    kit_gross = n_kits * grow_kit_price
+    kit_material = n_kits * grow_kit_cost
+    kit_shipping = n_kits * shipping_cost_per_order
+    kit_net = kit_gross - kit_material - kit_shipping
+    
+    total_rev = wet_rev + online_net + line_net + kit_net
+    baseline = total_harvest * wet_market_price
+    benefit = total_rev - baseline
+    
+    channels = [
+        {'name': '🏪 Wet Market', 'kg': round(wet_kg), 'revenue': round(wet_rev), 'price_per_kg': wet_market_price},
+        {'name': '🛒 Shopee/Lazada', 'kg': round(online_dried_output), 'revenue': round(online_net), 'price_per_kg': round(online_net / online_dried_output) if online_dried_output > 0 else 0},
+        {'name': '📱 LINE Direct', 'kg': round(line_kg), 'revenue': round(line_net), 'price_per_kg': round(line_net / line_kg) if line_kg > 0 else 0},
+        {'name': '🎁 Grow Kits', 'kg': round(kit_kg), 'revenue': round(kit_net), 'price_per_kg': round(kit_net / kit_kg) if kit_kg > 0 else 0},
+    ]
+    
+    setup_cost = 2000  # packaging, labels, photos
+    
+    return {
+        'total_harvest': round(total_harvest),
+        'channels': channels,
+        'total_revenue': round(total_rev),
+        'baseline_all_wet_market': round(baseline),
+        'benefit': round(benefit),
+        'per_farmer': round(benefit / cooperative_size) if cooperative_size > 0 else 0,
+        'setup_cost': setup_cost,
+        'payback_days': round((setup_cost / (benefit / 365)) if benefit > 0 else 999),
+        'blended_price_per_kg': round(total_rev / total_harvest, 1) if total_harvest > 0 else 0,
+    }
+
+
+# ── LAB 41: SOLAR ENERGY INTEGRATION ──
+def compute_solar_energy(
+    system_kw: float = 3,
+    cost_per_kw: float = 35000,
+    daily_sun_hours: float = 5.5,
+    electricity_price: float = 4.5,
+    feed_in_tariff: float = 2.70,
+    self_consumption_pct: float = 70,
+    tax_deduction: float = 200000,
+    tax_rate: float = 10,
+    panel_lifespan: int = 25,
+    degradation_pct: float = 0.5,
+    cooperative_size: int = 10,
+) -> Dict:
+    """Solar panel ROI for mushroom farm operations.
+    Sources: Namsang.co.th, PRD.go.th, PVKnowHow."""
+    
+    total_cost = system_kw * cost_per_kw
+    
+    # Annual generation
+    annual_kwh = system_kw * daily_sun_hours * 365 * 0.85  # 85% system efficiency
+    
+    # Self-consumption savings
+    self_kwh = annual_kwh * (self_consumption_pct / 100)
+    self_savings = self_kwh * electricity_price
+    
+    # Sell surplus to grid
+    surplus_kwh = annual_kwh * (1 - self_consumption_pct / 100)
+    surplus_income = surplus_kwh * feed_in_tariff
+    
+    # Tax benefit (one-time)
+    tax_benefit = min(total_cost, tax_deduction) * (tax_rate / 100)
+    
+    annual_benefit = self_savings + surplus_income
+    total_benefit_year1 = annual_benefit + tax_benefit
+    
+    # 25-year projection
+    total_25yr_benefit = sum([
+        annual_benefit * (1 - degradation_pct / 100) ** yr
+        for yr in range(panel_lifespan)
+    ]) + tax_benefit
+    
+    # Uses: fan ventilation, solar drying heater, LED grow lights, water pump
+    uses = {
+        'ventilation_fans': {'power_w': 200, 'hours_day': 12, 'annual_kwh': round(200 * 12 * 365 / 1000)},
+        'solar_dryer_fan': {'power_w': 150, 'hours_day': 8, 'annual_kwh': round(150 * 8 * 300 / 1000)},
+        'led_grow_lights': {'power_w': 100, 'hours_day': 6, 'annual_kwh': round(100 * 6 * 365 / 1000)},
+        'water_pump': {'power_w': 500, 'hours_day': 2, 'annual_kwh': round(500 * 2 * 365 / 1000)},
+    }
+    total_farm_demand = sum(u['annual_kwh'] for u in uses.values())
+    
+    return {
+        'system_kw': system_kw,
+        'total_cost': round(total_cost),
+        'annual_generation_kwh': round(annual_kwh),
+        'self_consumption': {
+            'kwh': round(self_kwh), 'savings': round(self_savings),
+        },
+        'grid_surplus': {
+            'kwh': round(surplus_kwh), 'income': round(surplus_income),
+        },
+        'tax_benefit': round(tax_benefit),
+        'annual_benefit': round(annual_benefit),
+        'total_25yr_benefit': round(total_25yr_benefit),
+        'payback_years': round(total_cost / annual_benefit, 1) if annual_benefit > 0 else 999,
+        'farm_uses': uses,
+        'farm_demand_kwh': total_farm_demand,
+        'self_sufficiency_pct': round(min(100, annual_kwh / total_farm_demand * 100), 1) if total_farm_demand > 0 else 0,
+        'per_farmer': round(annual_benefit / cooperative_size) if cooperative_size > 0 else 0,
+    }
+
+
+# ── LAB 42: BETA-GLUCAN SUPPLEMENTS ──
+def compute_beta_glucan(
+    annual_mushroom_kg: float = 10000,
+    pct_for_extraction: float = 20,
+    extraction_yield_pct: float = 8,
+    beta_glucan_price_per_kg: float = 1500,
+    capsule_mg: float = 500,
+    capsules_per_bottle: int = 60,
+    bottle_price: float = 690,
+    extraction_equipment_cost: float = 250000,
+    equipment_lifespan: int = 10,
+    fda_registration_cost: float = 50000,
+    lab_testing_annual: float = 30000,
+    packaging_per_bottle: float = 25,
+    labor_monthly: float = 15000,
+    cooperative_size: int = 10,
+    sell_mode: str = 'wholesale',
+) -> Dict:
+    """Beta-glucan extraction and supplement production ROI.
+    Sources: QualityPlus.co.th, ResearchGate, BangkokHospital."""
+    
+    input_kg = annual_mushroom_kg * (pct_for_extraction / 100)
+    
+    # Dried mushroom first (10:1 ratio)
+    dried_kg = input_kg / 10
+    
+    # Beta-glucan extraction (alkaline method)
+    beta_glucan_kg = dried_kg * (extraction_yield_pct / 100)
+    
+    # Revenue depends on sell mode
+    if sell_mode == 'wholesale':
+        revenue = beta_glucan_kg * beta_glucan_price_per_kg
+        n_bottles = 0
+    else:  # retail capsules
+        total_mg = beta_glucan_kg * 1_000_000
+        total_capsules = total_mg / capsule_mg
+        n_bottles = total_capsules / capsules_per_bottle
+        revenue = n_bottles * bottle_price
+    
+    # Costs
+    equipment_annual = extraction_equipment_cost / equipment_lifespan
+    fda_annual = fda_registration_cost / 5  # renew every 5 years
+    raw_material_cost = input_kg * 10  # ฿10/kg opportunity cost of mushrooms
+    labor_annual = labor_monthly * 12
+    packaging_total = n_bottles * packaging_per_bottle if sell_mode == 'retail' else 0
+    chemicals_annual = dried_kg * 50  # solvents, NaOH, etc.
+    
+    total_cost = equipment_annual + fda_annual + lab_testing_annual + raw_material_cost + labor_annual + packaging_total + chemicals_annual
+    
+    profit = revenue - total_cost
+    total_investment = extraction_equipment_cost + fda_registration_cost
+    
+    return {
+        'input_fresh_kg': round(input_kg),
+        'dried_kg': round(dried_kg),
+        'beta_glucan_kg': round(beta_glucan_kg, 1),
+        'sell_mode': sell_mode,
+        'n_bottles': round(n_bottles),
+        'revenue': round(revenue),
+        'costs': {
+            'equipment_annual': round(equipment_annual),
+            'fda': round(fda_annual),
+            'lab_testing': lab_testing_annual,
+            'raw_material': round(raw_material_cost),
+            'labor': round(labor_annual),
+            'packaging': round(packaging_total),
+            'chemicals': round(chemicals_annual),
+            'total': round(total_cost),
+        },
+        'profit': round(profit),
+        'total_investment': total_investment,
+        'payback_years': round(total_investment / profit, 1) if profit > 0 else 999,
+        'per_farmer': round(profit / cooperative_size) if cooperative_size > 0 else 0,
+        'science': {
+            'extraction_method': 'Alkaline (NaOH) extraction',
+            'pleurotus_beta_glucan_pct': '23-25% of dry weight',
+            'oyster_advantage': 'P. ostreatus has naturally high beta-glucan',
+        },
+    }
