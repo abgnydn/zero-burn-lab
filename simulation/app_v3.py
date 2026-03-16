@@ -30,6 +30,7 @@ from engines_v3 import (
     compute_drone_operations, compute_cold_pasteurization,
     compute_solar_drying, compute_vertical_tiers, compute_spawn_production,
     compute_ecommerce_channels, compute_solar_energy, compute_beta_glucan,
+    compute_pilot_roadmap,
     DEFAULT_TUBE_ID, DEFAULT_TUBE_OD, DEFAULT_COIL_DIAM,
 )
 from references import render_references
@@ -107,6 +108,8 @@ lab = st.sidebar.radio("Select Lab:", [
     "📱 E-Commerce Channels",
     "☀️ Solar Energy Integration",
     "🧬 Beta-Glucan Supplements",
+    "─── Pilot Program ───",
+    "🚀 Pilot Roadmap",
 ], index=0)
 
 st.sidebar.divider()
@@ -3000,3 +3003,129 @@ elif lab == "🧬 Beta-Glucan Supplements":
         """)
 
     render_references("🧬 Beta-Glucan Supplements")
+
+
+elif lab == "🚀 Pilot Roadmap":
+    st.title("🚀 Pilot Program Roadmap")
+    st.markdown("*The realistic 36-month journey from Day 0 to full optimization. No fairy tales — just month-by-month progress.*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️ Pilot Settings")
+        coop = st.slider("Cooperative size", 5, 30, 10, key="pr_c")
+        training = st.selectbox("Training quality", ['poor', 'average', 'good', 'excellent'],
+                               index=2, format_func=lambda x: {'poor': '😟 Poor (1 day)', 'average': '😐 Average (2 days)', 'good': '😊 Good (3 days + follow-up)', 'excellent': '🌟 Excellent (week + mentor)'}[x], key="pr_t")
+        loan = st.checkbox("BAAC micro-loan available", value=True, key="pr_l")
+        rai = st.slider("Rai per farmer", 5, 30, 15, key="pr_r")
+        price = st.slider("Mushroom price ฿/kg", 30, 120, 60, key="pr_p")
+
+    r = compute_pilot_roadmap(cooperative_size=coop, rai_per_farmer=rai, mushroom_price=price,
+                              training_quality=training, baac_loan_available=loan)
+
+    with col2:
+        # ─── Hero Metrics ───
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("⏱️ Breakeven", f"Month {r['breakeven_month']}" if r['breakeven_month'] else "N/A")
+        with m2:
+            st.metric("💰 Month 36 Income", f"฿{r['final_monthly']:,.0f}/mo")
+        with m3:
+            st.metric("📈 Income Multiplier", f"{r['income_multiplier']}×")
+        with m4:
+            st.metric("💵 Total Investment", f"฿{r['total_investment']:,.0f}")
+
+        st.divider()
+
+        tabs = st.tabs(["📈 Income Timeline", "🗺️ Phase Details", "🎯 Milestones"])
+
+        with tabs[0]:
+            months_list = [t['month'] for t in r['timeline']]
+            mushroom = [t['mushroom_income'] for t in r['timeline']]
+            rice = [t['rice_income'] for t in r['timeline']]
+            cumulative = [t['net_cumulative'] for t in r['timeline']]
+
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=months_list, y=mushroom, name='🍄 Mushroom Income',
+                                    fill='tozeroy', line=dict(color='#10b981', width=2),
+                                    fillcolor='rgba(16, 185, 129, 0.3)'))
+            fig.add_trace(go.Scatter(x=months_list, y=rice, name='🌾 Rice Income',
+                                    line=dict(color='#f59e0b', width=2, dash='dot')))
+            fig.add_trace(go.Scatter(x=months_list, y=[m + r_ for m, r_ in zip(mushroom, rice)],
+                                    name='💰 Total Income', line=dict(color='#3b82f6', width=3)))
+
+            # Phase boundary lines
+            for phase in r['phases']:
+                if phase['month_start'] > 0:
+                    fig.add_vline(x=phase['month_start'], line_dash="dash", line_color="gray", opacity=0.5)
+
+            fig.update_layout(
+                title='Monthly Income per Farmer (฿)',
+                height=400, template='plotly_white',
+                xaxis_title='Month', yaxis_title='฿ / month',
+                legend=dict(orientation='h', y=1.12),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Cumulative ROI chart
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(x=months_list, y=cumulative, name='Net (Income - Investment)',
+                                     fill='tozeroy', line=dict(color='#8b5cf6', width=2),
+                                     fillcolor='rgba(139, 92, 246, 0.2)'))
+            fig2.add_hline(y=0, line_dash="dash", line_color="red")
+            if r['breakeven_month']:
+                fig2.add_vline(x=r['breakeven_month'], line_color="#10b981",
+                              annotation_text=f"Breakeven: Month {r['breakeven_month']}")
+            fig2.update_layout(title='Cumulative Net Return (Income - Investment)', height=300,
+                              template='plotly_white', xaxis_title='Month', yaxis_title='฿ cumulative')
+            st.plotly_chart(fig2, use_container_width=True)
+
+        with tabs[1]:
+            for phase in r['phases']:
+                with st.expander(f"{phase['name']} (Month {phase['month_start']}-{phase['month_end']})", expanded=phase['month_start'] == 0):
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.metric("Investment", f"฿{phase['investment']:,.0f}")
+                    with c2:
+                        st.metric("Monthly Income", f"฿{phase['monthly_income']:,.0f}")
+                    with c3:
+                        st.caption(f"Risk: {phase['risk']}")
+
+                    st.markdown(f"**{phase['description']}**")
+                    st.caption(f"Activity: {phase['activity']}")
+                    st.markdown("**Added:**")
+                    for opt in phase['cumulative_optimizations']:
+                        st.markdown(f"- ✅ {opt}")
+
+        with tabs[2]:
+            ms = r['milestones']
+            st.markdown(f"""
+### 🎯 Key Milestones
+
+| When | Monthly Income | Total (w/ rice) | Net Cumulative | Status |
+|------|-------------|-----------------|----------------|--------|
+| **Month 6** | ฿{ms['month_6']['mushroom_income']:,} | ฿{ms['month_6']['total_income']:,}/mo | ฿{ms['month_6']['net_cumulative']:,} | {'🟢' if ms['month_6']['net_cumulative'] > 0 else '🔴'} {'Profitable' if ms['month_6']['net_cumulative'] > 0 else 'Still investing'} |
+| **Month 12** | ฿{ms['month_12']['mushroom_income']:,} | ฿{ms['month_12']['total_income']:,}/mo | ฿{ms['month_12']['net_cumulative']:,} | {'🟢' if ms['month_12']['net_cumulative'] > 0 else '🔴'} {'Profitable' if ms['month_12']['net_cumulative'] > 0 else 'Still investing'} |
+| **Month 24** | ฿{ms['month_24']['mushroom_income']:,} | ฿{ms['month_24']['total_income']:,}/mo | ฿{ms['month_24']['net_cumulative']:,} | {'🟢' if ms['month_24']['net_cumulative'] > 0 else '🟡'} {'Strong profit' if ms['month_24']['net_cumulative'] > 50000 else 'Growing'} |
+| **Month 36** | ฿{ms['month_36']['mushroom_income']:,} | ฿{ms['month_36']['total_income']:,}/mo | ฿{ms['month_36']['net_cumulative']:,} | 🟢 Full operation |
+
+### 📊 The Realistic Journey
+
+> **Month 0-2**: No income. Training + setup. Investment: ฿{r['phases'][0]['investment']:,}
+>
+> **Month 3-5**: First mushrooms! Learning curve. ~฿{r['phases'][1]['monthly_income']:,}/mo
+>
+> **Month 6-8**: Vertical racks → production jumps. ~฿{r['phases'][2]['monthly_income']:,}/mo
+>
+> **Month 9-14**: Solar dryer + e-commerce. ~฿{r['phases'][3]['monthly_income']:,}/mo
+>
+> **Month 15-23**: DIY spawn cuts costs. ~฿{r['phases'][4]['monthly_income']:,}/mo
+>
+> **Month 24-36**: Full optimization running. ~฿{r['phases'][5]['monthly_income']:,}/mo
+
+**⚠️ This is NOT the ฿500K/yr theoretical maximum.** This is the realistic ramp-up
+with learning curves, contamination, and incremental adoption.
+            """)
+
+            st.info(f"💡 **Training quality matters most!** You selected '{training}' — this impacts contamination rates, learning speed, and final yield. The difference between 'poor' and 'excellent' training is **±40% income**.")
+
+    render_references("🚀 Pilot Roadmap")

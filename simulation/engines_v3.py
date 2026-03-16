@@ -4225,3 +4225,191 @@ def compute_beta_glucan(
             'oyster_advantage': 'P. ostreatus has naturally high beta-glucan',
         },
     }
+
+
+# ── LAB 43: PILOT PROGRAM ROADMAP ──
+def compute_pilot_roadmap(
+    cooperative_size: int = 10,
+    rai_per_farmer: float = 15,
+    straw_per_rai: float = 650,
+    mushroom_price: float = 60,
+    rice_net_income: float = 50000,
+    training_quality: str = 'good',
+    baac_loan_available: bool = True,
+    months: int = 36,
+) -> Dict:
+    """Realistic month-by-month pilot program with phased optimization adoption.
+    Models the actual journey from Day 0 to full operation over 36 months."""
+
+    # ─── Phase definitions ───
+    # Each phase: (start_month, name, optimizations_added, incremental_monthly_income, investment, description)
+    phases = [
+        {
+            'month_start': 0, 'month_end': 2,
+            'name': '🎓 Phase 0: Training & Setup',
+            'description': 'Form cooperative, BAAC loan, buy basic equipment, 2-day training',
+            'activity': 'Training, equipment procurement, polyhouse construction',
+            'investment': 25000 if baac_loan_available else 40000,
+            'monthly_income': 0,  # No production yet
+            'cumulative_optimizations': ['Cooperative formed', 'Basic equipment'],
+            'risk': 'Low — no production risk yet',
+        },
+        {
+            'month_start': 3, 'month_end': 5,
+            'name': '🍄 Phase 1: First Harvest',
+            'description': 'Basic oyster mushroom cultivation in polyhouse with lime pasteurization',
+            'activity': 'First 1-2 cycles, learning, wet market sales',
+            'investment': 0,
+            'monthly_income': 0,  # Calculated below
+            'cumulative_optimizations': ['Polyhouse', 'Lime pasteurization', 'Oyster mushroom', 'Wet market'],
+            'risk': 'Medium — first-time contamination risk ~15%',
+        },
+        {
+            'month_start': 6, 'month_end': 8,
+            'name': '🏗️ Phase 2: Vertical Expansion',
+            'description': 'Add 4-tier shelving, increase bag count 4×',
+            'activity': 'Build bamboo shelving, scale up production',
+            'investment': 8000,
+            'monthly_income': 0,
+            'cumulative_optimizations': ['+ Vertical 4-tier racks'],
+            'risk': 'Low — proven technique, low cost',
+        },
+        {
+            'month_start': 9, 'month_end': 14,
+            'name': '🌞 Phase 3: Solar Drying',
+            'description': 'Solar dryer + dried product line. Start Shopee/LINE sales.',
+            'activity': 'Build solar dryer, create dried mushroom brand, list online',
+            'investment': 52000,
+            'monthly_income': 0,
+            'cumulative_optimizations': ['+ Solar dryer', '+ Dried products', '+ E-commerce (Shopee/LINE)'],
+            'risk': 'Medium — requires branding/packaging skills',
+        },
+        {
+            'month_start': 15, 'month_end': 23,
+            'name': '🧫 Phase 4: Spawn Independence',
+            'description': 'DIY spawn lab operational. Cost reduction kicks in.',
+            'activity': 'Spawn lab setup, training, first DIY batches',
+            'investment': 15000,
+            'monthly_income': 0,
+            'cumulative_optimizations': ['+ DIY spawn production'],
+            'risk': 'Medium-High — contamination risk if sloppy',
+        },
+        {
+            'month_start': 24, 'month_end': 35,
+            'name': '☀️ Phase 5: Full Optimization',
+            'description': 'Solar panels + scale. All optimizations running.',
+            'activity': 'Solar installation, grow kits, full e-commerce, considering beta-glucan partnership',
+            'investment': 90000,
+            'monthly_income': 0,
+            'cumulative_optimizations': ['+ Solar panels', '+ Grow kits', '+ Full channel mix'],
+            'risk': 'Low — proven operations, scaling existing model',
+        },
+    ]
+
+    # ─── Realistic income model per phase ───
+    # Training quality affects learning speed and contamination
+    quality_modifier = {'poor': 0.6, 'average': 0.8, 'good': 1.0, 'excellent': 1.15}
+    qm = quality_modifier.get(training_quality, 1.0)
+
+    total_straw = rai_per_farmer * straw_per_rai  # kg/farmer/year
+
+    # Phase 1: Basic — 2 cycles, single layer, wet market, ~15% contamination
+    # Realistic: ~200 bags × 2.5kg × 25% BE × 2 cycles × 0.85 success = ~213 kg/yr → ฿12,750/yr
+    p1_annual = 200 * 2.5 * (0.25 * qm) * 2 * 0.85 * mushroom_price
+    p1_monthly = p1_annual / 12
+
+    # Phase 2: Vertical — 3× effective bags, better technique, ~8% contamination
+    # ~600 bags × 2.5kg × 25% BE × 4 cycles × 0.92 = ~1,380 kg/yr → ฿82,800/yr
+    p2_annual = 600 * 2.5 * (0.25 * qm) * 4 * 0.92 * mushroom_price
+    p2_monthly = p2_annual / 12
+
+    # Phase 3: Drying + E-commerce — blended 1.6× price, same yield
+    blended_price_p3 = mushroom_price * 1.6
+    p3_annual = 600 * 2.5 * (0.25 * qm) * 5 * 0.94 * blended_price_p3
+    p3_monthly = p3_annual / 12
+
+    # Phase 4: Spawn savings — same revenue + cost reduction
+    spawn_savings_monthly = (2000 * 15 * 0.85) / 12  # 85% spawn cost savings
+    p4_monthly = p3_monthly + spawn_savings_monthly
+
+    # Phase 5: Full optimization — better pricing, solar savings
+    blended_price_p5 = mushroom_price * 2.0
+    p5_annual = 800 * 2.5 * (0.25 * qm) * 5 * 0.96 * blended_price_p5
+    solar_savings_monthly = 18000 / 12
+    p5_monthly = p5_annual / 12 + solar_savings_monthly + spawn_savings_monthly
+
+    phase_incomes = [0, p1_monthly, p2_monthly, p3_monthly, p4_monthly, p5_monthly]
+
+    # Update phases with calculated incomes
+    for i, phase in enumerate(phases):
+        phase['monthly_income'] = round(phase_incomes[i])
+
+    # ─── Build month-by-month timeline ───
+    timeline = []
+    cumulative_investment = 0
+    cumulative_income = 0
+
+    for month in range(months):
+        # Find current phase
+        current_phase = phases[0]
+        for phase in phases:
+            if phase['month_start'] <= month <= phase['month_end']:
+                current_phase = phase
+                break
+            elif month > phase['month_end']:
+                current_phase = phase
+
+        monthly = current_phase['monthly_income']
+
+        # Ramp-up: first 2 months of each phase at 50% income (learning curve)
+        months_in_phase = month - current_phase['month_start']
+        if months_in_phase == 0:
+            monthly = round(monthly * 0.3)
+            cumulative_investment += current_phase['investment']
+        elif months_in_phase == 1:
+            monthly = round(monthly * 0.6)
+
+        cumulative_income += monthly
+        rice_monthly = rice_net_income / 12
+
+        timeline.append({
+            'month': month,
+            'phase': current_phase['name'],
+            'mushroom_income': monthly,
+            'rice_income': round(rice_monthly),
+            'total_income': round(monthly + rice_monthly),
+            'cumulative_income': round(cumulative_income),
+            'cumulative_investment': round(cumulative_investment),
+            'net_cumulative': round(cumulative_income - cumulative_investment),
+        })
+
+    # ─── Find breakeven month ───
+    breakeven_month = None
+    for t in timeline:
+        if t['net_cumulative'] > 0 and breakeven_month is None:
+            breakeven_month = t['month']
+
+    # ─── Summary for cooperative ───
+    month_6 = timeline[5] if len(timeline) > 5 else timeline[-1]
+    month_12 = timeline[11] if len(timeline) > 11 else timeline[-1]
+    month_24 = timeline[23] if len(timeline) > 23 else timeline[-1]
+    month_36 = timeline[35] if len(timeline) > 35 else timeline[-1]
+
+    total_investment = sum(p['investment'] for p in phases)
+
+    return {
+        'phases': phases,
+        'timeline': timeline,
+        'breakeven_month': breakeven_month,
+        'total_investment': total_investment,
+        'milestones': {
+            'month_6': month_6,
+            'month_12': month_12,
+            'month_24': month_24,
+            'month_36': month_36,
+        },
+        'cooperative_size': cooperative_size,
+        'training_quality': training_quality,
+        'final_monthly': month_36['total_income'],
+        'income_multiplier': round(month_36['total_income'] / (rice_net_income / 12), 1),
+    }

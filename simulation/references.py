@@ -573,6 +573,10 @@ LAB_REFERENCES = {
         {"title": "Beta-Glucan Content in Thai Pleurotus ostreatus", "source": "Asian Journal of Applied Biochemistry", "url": "https://asianjab.com/", "explanation": "P. ostreatus yields 23-25% beta-glucan by dry weight using alkaline extraction. Schizophyllum commune: 49%."},
         {"title": "Beta-Glucan Wholesale Pricing in Thailand", "source": "QualityPlus Thailand", "url": "https://qualityplus.co.th/", "explanation": "Yeast-derived beta-glucan: ฿1,524-5,564/kg wholesale. Mushroom-derived commands premium pricing."},
     ],
+    "🚀 Pilot Roadmap": [
+        {"title": "Farmer Adoption S-Curve Model — Training Quality Impact", "source": "Zero-Burn Lab Internal", "url": "#", "explanation": "Internal simulation: training quality is the #1 adoption driver. Good training → 50% adoption by Y5. Poor training → 20% by Y5."},
+        {"title": "BAAC Micro-Loan Programs for Agricultural Cooperatives", "source": "BAAC Thailand", "url": "https://www.baac.or.th/", "explanation": "BAAC offers 4.5% agricultural loans for cooperatives. Payback typically < 6 months for mushroom equipment investment."},
+    ],
 }
 
 
