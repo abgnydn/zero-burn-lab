@@ -9,6 +9,13 @@ import plotly.express as px
 import numpy as np
 import pandas as pd
 import os
+import importlib
+import engines_v3 as _engines_mod
+
+# Force reload to bust Streamlit Cloud's module cache
+if not hasattr(_engines_mod, 'compute_hub_at_mill'):
+    importlib.reload(_engines_mod)
+
 from engines_v3 import (
     compute_reynolds, compute_dean_number, compute_critical_reynolds_helical,
     compute_nusselt_helical, compute_overall_u, compute_pressure_drop_helical,
@@ -3352,10 +3359,10 @@ elif lab == "🏭 Hub-at-Mill":
         st.divider()
 
         # Show the image for selected tier
-        _img_dir = _os.path.join(_os.path.dirname(__file__), 'images')
+        _img_dir = os.path.join(os.path.dirname(__file__), 'images')
         _img_map = {'lean': 'lean_mvp.png', 'balanced': 'balanced_hub.png', 'full': 'full_hub.png'}
-        _img_path = _os.path.join(_img_dir, _img_map[tier])
-        if _os.path.exists(_img_path):
+        _img_path = os.path.join(_img_dir, _img_map[tier])
+        if os.path.exists(_img_path):
             st.image(_img_path, use_container_width=True)
 
         st.divider()
