@@ -3364,24 +3364,40 @@ elif lab == "🏭 Hub-at-Mill":
     with col1:
         st.subheader("⚙️")
         tier = st.radio("Investment Tier", ['lean', 'balanced', 'full'],
-                       format_func=lambda x: {'lean': '🌱 Lean MVP (฿50K)', 'balanced': '⚖️ Balanced (฿250K)', 'full': '🏭 Full (฿751K)'}[x], key="ham_t")
+                       format_func=lambda x: {'lean': '🌱 Lean (฿50K)', 'balanced': '⚖️ Balanced (฿250K)', 'full': '🏭 Full (฿751K)'}[x], key="ham_t")
         farmers = st.slider("Farmers in radius", 10, 50, 30, key="ham_f")
-        straw_price = st.slider("Pay per kg straw (฿)", 1, 5, 3, key="ham_sp")
-        pct_dried = st.slider("% dried products", 10, 60, 30, key="ham_pd")
+        straw_price = st.slider("Pay/kg straw (฿)", 1, 5, 3, key="ham_sp")
+        pct_dried = st.slider("% dried products", 10, 80, 30, key="ham_pd")
 
-    r = compute_hub_at_mill(tier=tier, n_farmers=farmers, straw_buy_price=straw_price, pct_dried=pct_dried)
+        st.divider()
+        st.markdown("#### 🚀 " + ("ตัวเร่งกำไร" if TH else "Profit Boosters"))
+        o_spawn = st.checkbox("🧫 " + ("ทำหัวเชื้อเอง" if TH else "Own Spawn Lab"), key="ho_sp")
+        o_lion = st.checkbox("🦁 " + ("เห็ดแผงคอราชสีห์" if TH else "Add Lion's Mane (30%)"), key="ho_lm")
+        o_tiers = st.checkbox("🏗️ " + ("เพิ่มชั้น +50%" if TH else "Extra Tiers (+50%)"), key="ho_et")
+        o_compost = st.checkbox("♻️ " + ("ขายปุ๋ย" if TH else "Sell Compost"), key="ho_co")
+        o_sub = st.checkbox("📦 " + ("ขายตรง +30%" if TH else "Direct Sales +30%"), key="ho_su")
+        o_beta = st.checkbox("💊 " + ("เบต้ากลูแคน" if TH else "Beta-Glucan (฿2K/kg)"), key="ho_bg")
+        o_export = st.checkbox("🇯🇵 " + ("ส่งออก 3x ราคา" if TH else "Export (3× dried price)"), key="ho_ex")
+
+    r = compute_hub_at_mill(
+        tier=tier, n_farmers=farmers, straw_buy_price=straw_price, pct_dried=pct_dried,
+        opt_spawn_lab=o_spawn, opt_lions_mane=o_lion, opt_extra_tiers=o_tiers,
+        opt_compost=o_compost, opt_subscription=o_sub, opt_beta_glucan=o_beta, opt_export=o_export,
+    )
 
     with col2:
-        # Hero metrics
+        # Hero metrics with boost indicator
         m1, m2, m3, m4 = st.columns(4)
         with m1:
-            st.metric("💰 Investment", f"฿{r['tier']['investment']:,}")
+            st.metric("💰 Investment", f"฿{r['total_investment']:,}",
+                      delta=f"+฿{r['extra_investment']:,} upgrades" if r['extra_investment'] > 0 else None)
         with m2:
-            st.metric("📈 Annual Profit", f"฿{r['profit']:,}")
+            st.metric("📈 Annual Profit", f"฿{r['profit']:,}",
+                      delta=f"+฿{r['profit_boost']:,}" if r['profit_boost'] > 0 else None)
         with m3:
             st.metric("🔄 ROI", f"{r['roi']}×/yr")
         with m4:
-            st.metric("⏱️ Breakeven", f"Month {r['breakeven_months']}")
+            st.metric("⏱️ Breakeven", f"Mo {r['breakeven_months']}")
 
         st.divider()
 
@@ -3540,6 +3556,38 @@ if TH else
 | **ROI** | **{tiers_data[0]['roi']}×** | **{tiers_data[1]['roi']}×** | **{tiers_data[2]['roi']}×** |
 | Breakeven | Mo {tiers_data[0]['breakeven']} | Mo {tiers_data[1]['breakeven']} | Mo {tiers_data[2]['breakeven']} |
         """)
+
+        # ─── Profit Optimizer Impact ───
+        if r['levers']:
+            st.subheader("🚀 " + ("ผลกระทบตัวเร่งกำไร" if TH else "Profit Booster Impact"))
+
+            lever_names = [("📊 " + ("พื้นฐาน" if TH else "Baseline"))] + [l['name'] for l in r['levers']] + [("💰 " + ("รวม" if TH else "Total"))]
+            lever_values = [r['base_profit']] + [l['boost'] for l in r['levers']] + [r['profit']]
+            lever_colors = ['#6b7280'] + ['#10b981'] * len(r['levers']) + ['#f59e0b']
+
+            fig_lever = go.Figure(go.Bar(
+                x=lever_names, y=lever_values,
+                marker_color=lever_colors,
+                text=[f"฿{v:,}" for v in lever_values],
+                textposition='outside', textfont=dict(size=13, color='white'),
+            ))
+            fig_lever.update_layout(
+                height=380, template='plotly_dark',
+                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                yaxis_title='฿ Annual Impact',
+                margin=dict(t=10),
+            )
+            st.plotly_chart(fig_lever, use_container_width=True)
+
+            # Lever detail table
+            st.markdown("| " + ("ตัวเร่ง" if TH else "Lever") + " | " + ("กำไรเพิ่ม" if TH else "Profit Boost") + " | " + ("ลงทุนเพิ่ม" if TH else "Extra Investment") + " | " + ("ROI ตัวเร่ง" if TH else "Lever ROI") + " |")
+            st.markdown("|--------|-------------|-----------------|-----------|")
+            for l in r['levers']:
+                lroi = f"{l['boost'] / l['cost']:.0f}×" if l['cost'] > 0 else "∞ (free)"
+                st.markdown(f"| {l['name']} | +฿{l['boost']:,} | ฿{l['cost']:,} | **{lroi}** |")
+            st.markdown(f"| **TOTAL** | **+฿{r['profit_boost']:,}** | **฿{r['extra_investment']:,}** | **{r['profit_boost'] / r['extra_investment']:.0f}×** |" if r['extra_investment'] > 0 else f"| **TOTAL** | **+฿{r['profit_boost']:,}** | **฿0** | **∞** |")
+
+            st.divider()
 
         with st.expander("🚀 Recommended Scaling Path"):
             st.markdown("""

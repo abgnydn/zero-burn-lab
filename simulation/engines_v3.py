@@ -4706,7 +4706,8 @@ def compute_labor_allocation(
     }
 
 
-# ── LAB 47: HUB-AT-MILL COMPARISON ──
+
+# ── LAB 47: HUB-AT-MILL COMPARISON (with Profit Optimizer) ──
 def compute_hub_at_mill(
     tier: str = 'balanced',
     n_farmers: int = 30,
@@ -4720,9 +4721,16 @@ def compute_hub_at_mill(
     cycles_per_year: int = 5,
     hired_workers: int = 1,
     daily_wage: float = 370,
+    # ─── Optimization levers ───
+    opt_spawn_lab: bool = False,
+    opt_lions_mane: bool = False,
+    opt_extra_tiers: bool = False,
+    opt_compost: bool = False,
+    opt_subscription: bool = False,
+    opt_beta_glucan: bool = False,
+    opt_export: bool = False,
 ) -> Dict:
-    """Hub-at-Mill 3-tier comparison: Lean MVP, Balanced, Full Build.
-    Models centralized mushroom production at rice mill."""
+    """Hub-at-Mill with profit optimization levers."""
 
     tiers = {
         'lean': {
@@ -4730,98 +4738,159 @@ def compute_hub_at_mill(
             'bags_per_cycle': 500, 'be_pct': 22, 'contamination_pct': 12,
             'blended_multiplier': 1.3, 'hired': 0, 'family_workers': 2,
             'has_dryer': True, 'has_spawn_lab': False, 'has_solar': False,
-            'polyhouse': 'Mill shed + plastic', 'shelving': 'Bamboo DIY',
-            'dryer': 'DIY bamboo+plastic', 'misting': 'Manual spray',
         },
         'balanced': {
             'name': '⚖️ Balanced', 'investment': 250000,
             'bags_per_cycle': 2000, 'be_pct': 25, 'contamination_pct': 8,
             'blended_multiplier': 1.6, 'hired': 1, 'family_workers': 1,
             'has_dryer': True, 'has_spawn_lab': False, 'has_solar': False,
-            'polyhouse': 'Bamboo frame 80m²', 'shelving': 'Bamboo+steel hybrid',
-            'dryer': 'Semi-pro metal+fan', 'misting': 'Drip irrigation',
         },
         'full': {
             'name': '🏭 Full Build', 'investment': 751600,
             'bags_per_cycle': 5000, 'be_pct': 25, 'contamination_pct': 5,
             'blended_multiplier': 2.0, 'hired': 2, 'family_workers': 0,
             'has_dryer': True, 'has_spawn_lab': True, 'has_solar': True,
-            'polyhouse': 'Steel 200m²', 'shelving': 'Full metal 6-tier',
-            'dryer': 'Commercial 100kg/day', 'misting': 'Auto-mist + sensors',
         },
     }
 
     t = tiers[tier]
     total_straw = n_farmers * rai_per_farmer * straw_per_rai
 
-    # Production
-    bags_year = t['bags_per_cycle'] * cycles_per_year
+    # ─── Apply optimizations ───
+    bags_per_cycle = t['bags_per_cycle']
+    extra_investment = 0
+
+    if opt_extra_tiers:
+        bags_per_cycle = int(bags_per_cycle * 1.5)
+        extra_investment += 25000
+
+    has_spawn = t['has_spawn_lab'] or opt_spawn_lab
+    if opt_spawn_lab and not t['has_spawn_lab']:
+        extra_investment += 15000
+
+    if opt_beta_glucan:
+        extra_investment += 10000
+
+    if opt_lions_mane:
+        extra_investment += 5000
+
+    total_investment = t['investment'] + extra_investment
+
+    # ─── Production ───
+    bags_year = bags_per_cycle * cycles_per_year
     substrate_kg = bags_year * 2.5
     mushroom_kg = substrate_kg * (t['be_pct'] / 100) * (1 - t['contamination_pct'] / 100)
 
-    # Revenue split — use blended multiplier for fresh (market mix premium)
+    lions_mane_kg = 0
+    lions_mane_revenue = 0
+    if opt_lions_mane:
+        lions_mane_kg = mushroom_kg * 0.3
+        mushroom_kg = mushroom_kg * 0.7
+        lions_mane_revenue = lions_mane_kg * 200
+
+    # ─── Revenue split ───
     fresh_pct = (100 - pct_dried - pct_powder) / 100
     fresh_kg = mushroom_kg * fresh_pct
-    dried_kg = mushroom_kg * (pct_dried / 100) / 10  # 10:1 drying ratio
+    dried_kg = mushroom_kg * (pct_dried / 100) / 10
     powder_kg = mushroom_kg * (pct_powder / 100) / 10
 
-    blended_fresh_price = mushroom_price * t['blended_multiplier']
-    rev_fresh = fresh_kg * blended_fresh_price
-    rev_dried = dried_kg * dried_price
-    rev_powder = powder_kg * 600
-    total_revenue = rev_fresh + rev_dried + rev_powder
+    actual_fresh_price = mushroom_price * t['blended_multiplier']
+    actual_dried_price = dried_price
+    powder_price = 600
 
-    # Costs — hub gets bulk discounts
-    straw_needed_kg = substrate_kg * 0.7  # straw is ~70% of substrate (rest is water, lime)
-    straw_cost = straw_needed_kg * straw_buy_price
-    spawn_per_bag = 3 if t['has_spawn_lab'] else 8  # bulk discount at hub scale vs ฿15 retail
-    spawn_cost = bags_year * spawn_per_bag
+    if opt_subscription:
+        actual_fresh_price *= 1.3
+        actual_dried_price *= 1.3
+
+    if opt_export:
+        actual_dried_price *= 3.0
+
+    if opt_beta_glucan:
+        powder_price = 2000
+
+    rev_fresh = fresh_kg * actual_fresh_price
+    rev_dried = dried_kg * actual_dried_price
+    rev_powder = powder_kg * powder_price
+    total_revenue = rev_fresh + rev_dried + rev_powder + lions_mane_revenue
+
+    compost_revenue = 0
+    if opt_compost:
+        compost_revenue = substrate_kg * 0.8 * 5
+        total_revenue += compost_revenue
+
+    # ─── Costs ───
+    straw_cost = substrate_kg * 0.7 * straw_buy_price
+    spawn_cost = bags_year * (3 if has_spawn else 8)
     labor_cost = t['hired'] * daily_wage * 300
-    supplies_cost = bags_year * 1.5  # bags, rubber bands
+    supplies_cost = bags_year * 1.5
     electricity = 0 if t['has_solar'] else bags_year * 0.3
     total_costs = straw_cost + spawn_cost + labor_cost + supplies_cost + electricity
 
     profit = total_revenue - total_costs
-    roi = profit / t['investment'] if t['investment'] > 0 else 0
-    breakeven_months = round(t['investment'] / (profit / 12)) if profit > 0 else 999
+    roi = profit / total_investment if total_investment > 0 else 0
+    breakeven_months = round(total_investment / (profit / 12)) if profit > 0 else 999
 
-    # Farmer income (straw payment)
     straw_used = min(substrate_kg, total_straw)
     farmer_straw_income = (straw_used * straw_buy_price) / n_farmers
 
-    # Compare all tiers
+    # ─── Baseline (no optimizations) ───
+    base_bags = t['bags_per_cycle'] * cycles_per_year
+    base_sub = base_bags * 2.5
+    base_mk = base_sub * (t['be_pct'] / 100) * (1 - t['contamination_pct'] / 100)
+    base_fk = base_mk * 0.6; base_dk = base_mk * 0.3 / 10; base_pk = base_mk * 0.1 / 10
+    base_rev = base_fk * mushroom_price * t['blended_multiplier'] + base_dk * dried_price + base_pk * 600
+    base_tc = (base_sub * 0.7 * straw_buy_price + base_bags * (3 if t['has_spawn_lab'] else 8)
+               + t['hired'] * daily_wage * 300 + base_bags * 1.5
+               + (0 if t['has_solar'] else base_bags * 0.3))
+    base_profit = base_rev - base_tc
+
+    # ─── Individual lever impacts ───
+    levers = []
+    if opt_spawn_lab and not t['has_spawn_lab']:
+        levers.append({'name': '🧫 Spawn Lab', 'boost': round(base_bags * 5), 'cost': 15000})
+    if opt_lions_mane:
+        levers.append({'name': '🦁 Lion\'s Mane (30%)', 'boost': round(lions_mane_revenue), 'cost': 5000})
+    if opt_extra_tiers:
+        levers.append({'name': '🏗️ Extra Tiers (+50%)', 'boost': round((bags_year - base_bags) * 2.5 * (t['be_pct'] / 100) * 0.6 * mushroom_price * t['blended_multiplier'] * 0.5), 'cost': 25000})
+    if opt_compost:
+        levers.append({'name': '♻️ Compost Sales', 'boost': round(compost_revenue), 'cost': 0})
+    if opt_subscription:
+        levers.append({'name': '📦 Direct Sales +30%', 'boost': round(fresh_kg * mushroom_price * t['blended_multiplier'] * 0.3), 'cost': 0})
+    if opt_beta_glucan:
+        levers.append({'name': '💊 Beta-Glucan (฿2K/kg)', 'boost': round(powder_kg * 1400), 'cost': 10000})
+    if opt_export:
+        levers.append({'name': '🇯🇵 Export (3× dried)', 'boost': round(dried_kg * dried_price * 2), 'cost': 0})
+
+    # All tiers (baseline)
     all_tiers = []
     for key, ti in tiers.items():
         by = ti['bags_per_cycle'] * cycles_per_year
         sk = by * 2.5
         mk = sk * (ti['be_pct'] / 100) * (1 - ti['contamination_pct'] / 100)
         fk = mk * 0.6; dk = mk * 0.3 / 10; pk = mk * 0.1 / 10
-        bfp = mushroom_price * ti['blended_multiplier']
-        rev = fk * bfp + dk * dried_price + pk * 600
-        sc = sk * 0.7 * straw_buy_price
-        spc = by * (3 if ti['has_spawn_lab'] else 8)
-        lc = ti['hired'] * daily_wage * 300
-        sup = by * 1.5; el = 0 if ti['has_solar'] else by * 0.3
-        tc = sc + spc + lc + sup + el
+        rev = fk * mushroom_price * ti['blended_multiplier'] + dk * dried_price + pk * 600
+        tc = (sk * 0.7 * straw_buy_price + by * (3 if ti['has_spawn_lab'] else 8)
+              + ti['hired'] * daily_wage * 300 + by * 1.5
+              + (0 if ti['has_solar'] else by * 0.3))
         pr = rev - tc
         all_tiers.append({
-            'key': key, 'name': ti['name'],
-            'investment': ti['investment'],
-            'revenue': round(rev), 'costs': round(tc),
-            'profit': round(pr),
+            'key': key, 'name': ti['name'], 'investment': ti['investment'],
+            'revenue': round(rev), 'costs': round(tc), 'profit': round(pr),
             'roi': round(pr / ti['investment'], 1) if ti['investment'] > 0 else 0,
             'breakeven': round(ti['investment'] / (pr / 12)) if pr > 0 else 999,
             'bags_year': by, 'mushroom_kg': round(mk),
         })
 
     return {
-        'tier': t,
+        'tier': t, 'total_investment': total_investment, 'extra_investment': extra_investment,
         'production': {
             'bags_year': bags_year, 'mushroom_kg': round(mushroom_kg),
             'fresh_kg': round(fresh_kg), 'dried_kg': round(dried_kg), 'powder_kg': round(powder_kg),
+            'lions_mane_kg': round(lions_mane_kg),
         },
         'revenue': {
             'fresh': round(rev_fresh), 'dried': round(rev_dried), 'powder': round(rev_powder),
+            'lions_mane': round(lions_mane_revenue), 'compost': round(compost_revenue),
             'total': round(total_revenue),
         },
         'costs': {
@@ -4829,10 +4898,8 @@ def compute_hub_at_mill(
             'labor': round(labor_cost), 'supplies': round(supplies_cost),
             'electricity': round(electricity), 'total': round(total_costs),
         },
-        'profit': round(profit),
-        'roi': round(roi, 1),
-        'breakeven_months': breakeven_months,
+        'profit': round(profit), 'roi': round(roi, 1), 'breakeven_months': breakeven_months,
         'farmer_straw_income': round(farmer_straw_income),
-        'all_tiers': all_tiers,
-        'n_farmers': n_farmers,
+        'base_profit': round(base_profit), 'profit_boost': round(profit - base_profit),
+        'levers': levers, 'all_tiers': all_tiers, 'n_farmers': n_farmers,
     }
