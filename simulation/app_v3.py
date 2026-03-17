@@ -3405,43 +3405,24 @@ if TH else
             """)
 
         with hw2:
-            st.markdown("#### " + ("ใครทำอะไร" if TH else "👥 Who Does What"))
-
-            tier_ops = {
-                'lean': {
-                    'owner': '""" + ("เจ้าของโรงสี + ครอบครัว" if TH else "Mill owner + family") + """',
-                    'owner_role': '""" + ("ดูแลทุกอย่าง — บรรจุ, ฉีดน้ำ, เก็บเกี่ยว, แพ็ค" if TH else "Runs everything — bagging, misting, harvest, packaging") + """',
-                    'farmers': '""" + ("ส่งฟางพร้อมข้าว" if TH else "Deliver straw with rice, nothing else") + """',
-                    'workers': '""" + ("ไม่มี — ครอบครัวทำเอง" if TH else "None — family operation") + """',
-                },
-                'balanced': {
-                    'owner': '""" + ("เจ้าของโรงสี" if TH else "Mill owner") + """',
-                    'owner_role': '""" + ("ดูแลภาพรวม, ขาย, บัญชี" if TH else "Supervises, handles sales & accounting") + """',
-                    'farmers': '""" + ("ส่งฟาง, รับค่าฟาง + ปุ๋ยฟรี" if TH else "Deliver straw, get paid ฿3/kg + free compost") + """',
-                    'workers': '""" + ("1 คนจ้าง — บรรจุ, เก็บ, แพ็ค" if TH else "1 hired — bagging, harvesting, packaging") + """',
-                },
-                'full': {
-                    'owner': '""" + ("เจ้าของโรงสี / นักลงทุน" if TH else "Mill owner / investor") + """',
-                    'owner_role': '""" + ("บริหารธุรกิจ, ขยายตลาด" if TH else "Business management, market expansion") + """',
-                    'farmers': '""" + ("ส่งฟาง, รับค่าฟาง + ปุ๋ยฟรี" if TH else "Deliver straw, get paid ฿3/kg + free compost") + """',
-                    'workers': '""" + ("2 คนเต็มเวลา — ผลิต + เก็บ + แปรรูป" if TH else "2 full-time — production + harvest + processing") + """',
-                },
-            }
-            t_ops = tier_ops[tier]
-            st.markdown(f"""
-| """ + ("บทบาท" if TH else "Role") + """ | """ + ("หน้าที่" if TH else "Responsibility") + """ |
-|------|----------------|
-| 🏭 **{t_ops['owner']}** | {t_ops['owner_role']} |
-| 🌾 **""" + ("เกษตรกร" if TH else f"Farmers ({farmers})") + """** | {t_ops['farmers']} |
-| 👷 **""" + ("คนงาน" if TH else "Workers") + """** | {t_ops['workers']} |
+            st.markdown("#### " + ("ใครทำอะไร — ทุกระดับ" if TH else "👥 Who Does What — All Tiers"))
+            st.markdown("""
+| """ + ("บทบาท" if TH else "Role") + """ | 🌱 """ + ("เริ่มต้น" if TH else "Lean MVP") + """ | ⚖️ """ + ("สมดุล" if TH else "Balanced") + """ | 🏭 """ + ("เต็มรูปแบบ" if TH else "Full Build") + """ |
+|------|-----------|------------|-----------|
+| 🏭 **""" + ("เจ้าของ" if TH else "Owner") + """** | """ + ("ครอบครัวทำเอง" if TH else "Family runs all") + """ | """ + ("ดูแลภาพรวม+ขาย" if TH else "Supervises + sales") + """ | """ + ("บริหารธุรกิจ" if TH else "Business manager") + """ |
+| 👷 **""" + ("คนงาน" if TH else "Workers") + """** | """ + ("ไม่มี" if TH else "None") + """ | """ + ("1 คนจ้าง" if TH else "1 hired") + """ | """ + ("2 คนเต็มเวลา" if TH else "2 full-time") + """ |
+| 🌾 **""" + ("เกษตรกร" if TH else "Farmers") + """** | """ + ("ส่งฟาง" if TH else "Deliver straw") + """ | """ + ("ส่งฟาง+รับเงิน" if TH else "Straw + get paid") + """ | """ + ("ส่งฟาง+ปุ๋ยฟรี" if TH else "Straw + compost") + """ |
+| 🏠 **""" + ("โรงเรือน" if TH else "Facility") + """** | """ + ("โรงสีเดิม+พลาสติก" if TH else "Mill shed + plastic") + """ | """ + ("ไม้ไผ่ 80m²" if TH else "Bamboo 80m²") + """ | """ + ("เหล็ก 200m²" if TH else "Steel 200m²") + """ |
+| 🌞 **""" + ("ตากแห้ง" if TH else "Dryer") + """** | """ + ("DIY ไม้ไผ่" if TH else "DIY bamboo") + """ | """ + ("กึ่งมืออาชีพ" if TH else "Semi-pro metal") + """ | """ + ("เชิงพาณิชย์" if TH else "Commercial") + """ |
+| 💧 **""" + ("ฉีดน้ำ" if TH else "Misting") + """** | """ + ("ฉีดมือ" if TH else "Manual spray") + """ | """ + ("ระบบน้ำหยด" if TH else "Drip irrigation") + """ | """ + ("ออโต้+เซนเซอร์" if TH else "Auto + sensors") + """ |
+| 🧫 **""" + ("หัวเชื้อ" if TH else "Spawn") + """** | """ + ("ซื้อ ฿8/ถุง" if TH else "Buy ฿8/bag") + """ | """ + ("ซื้อ→ทำเอง" if TH else "Buy → DIY later") + """ | """ + ("ทำเอง ฿3/ถุง" if TH else "Own lab ฿3/bag") + """ |
+| ☀️ **""" + ("พลังงาน" if TH else "Power") + """** | """ + ("ไฟโรงสี" if TH else "Mill's power") + """ | """ + ("ไฟโรงสี" if TH else "Mill's power") + """ | """ + ("โซลาร์เซลล์" if TH else "Solar panels") + """ |
             """)
 
-            st.markdown("#### " + ("สิ่งที่เกษตรกรต้องทำ" if TH else "🎯 Key Advantage"))
-            st.success("**" + (
-                "เกษตรกรไม่ต้องเรียนรู้อะไรใหม่เลย — แค่ส่งฟางที่ปกติจะเผาทิ้ง แล้วรับเงิน"
-                if TH else
-                "Farmers don't learn anything new — they just deliver straw they'd normally burn, and get paid. All the mushroom expertise stays at the hub."
-            ) + "**")
+            st.markdown("#### " + ("จุดเด่นแต่ละระดับ" if TH else "🎯 Key Advantage Per Tier"))
+            st.success("🌱 **Lean**: " + ("เริ่มได้เลย ไม่ต้องรอ" if TH else "Start tomorrow, ฿50K, prove the model"))
+            st.info("⚖️ **Balanced**: " + ("สมดุลต้นทุน-คุณภาพ" if TH else "Best quality/cost balance, 1 worker handles everything"))
+            st.warning("🏭 **Full**: " + ("เต็มรูปแบบ ขยายได้ทันที" if TH else "Maximum throughput, ready to scale to 2nd hub"))
 
         st.divider()
 
