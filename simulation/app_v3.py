@@ -3367,6 +3367,84 @@ elif lab == "🏭 Hub-at-Mill":
 
         st.divider()
 
+        # ─── HOW IT WORKS ───
+        st.subheader("🔄 " + ("ระบบทำงานอย่างไร" if TH else "How It Works"))
+        st.markdown("### " + ("หลักการ: ศูนย์กลางที่โรงสี" if TH else "The Concept: Centralized Hub at Rice Mill"))
+        st.markdown("""
+> **""" + ("ทำไมที่โรงสี?" if TH else "Why at a rice mill?") + """** """ + (
+"เกษตรกรส่งข้าวมาที่โรงสีอยู่แล้ว ฟางข้าวเป็นของเสียที่โรงสี ถ้าเราตั้งโรงเรือนเห็ดที่โรงสี ฟางจะมาถึงฟรี — ไม่มีค่าขนส่ง"
+if TH else
+"Farmers already deliver rice to the mill. Straw is waste at the mill. If we put the mushroom hub AT the mill, straw arrives for free — zero transport cost. The mill owner already has land, electricity, and farmer relationships."
+) + """
+        """)
+
+        hw1, hw2 = st.columns(2)
+        with hw1:
+            st.markdown("#### " + ("การทำงานรายวัน" if TH else "📋 Daily Operations Flow"))
+            st.markdown("""
+1. 🌾 **""" + ("เกษตรกรส่งฟาง" if TH else "Farmers deliver straw") + """**
+   """ + ("พร้อมกับข้าว — ไม่มีเที่ยวรถเพิ่ม" if TH else "Same truck as rice delivery — no extra trips") + """
+
+2. 🧪 **""" + ("ปูนขาวฆ่าเชื้อ" if TH else "Lime pasteurization") + """**
+   """ + ("แช่ฟางในปูนขาว 12-24 ชม." if TH else "Soak straw in lime solution 12-24h at the hub") + """
+
+3. 📦 **""" + ("บรรจุถุงและใส่หัวเชื้อ" if TH else "Bagging & spawning") + """**
+   """ + ("ทำโดยผู้เชี่ยวชาญ — ไม่ต้องฝึกเกษตรกร" if TH else "Done by trained workers — no farmer training needed") + """
+
+4. 🍄 **""" + ("บ่มและเก็บเกี่ยว" if TH else "Incubate & harvest") + """**
+   """ + ("30 วันบ่ม → 3 สัปดาห์เก็บ × 3 รอบ/ถุง" if TH else "30 days incubation → 3 weeks harvesting × 3 flushes") + """
+
+5. 🌞 **""" + ("ตากแห้งและแปรรูป" if TH else "Dry & process") + """**
+   """ + ("แบ่ง: สด 60%, ตากแห้ง 30%, ผง 10%" if TH else "Split: 60% sold fresh, 30% solar dried, 10% powder") + """
+
+6. 📱 **""" + ("ขาย" if TH else "Sell") + """**
+   """ + ("ตลาดสด + Shopee + LINE" if TH else "Wet market + Shopee/Lazada + LINE groups") + """
+
+7. ♻️ **""" + ("รีไซเคิล" if TH else "Recycle") + """**
+   """ + ("กากเห็ดส่งกลับเป็นปุ๋ย" if TH else "Spent substrate → compost → back to farmers' fields") + """
+            """)
+
+        with hw2:
+            st.markdown("#### " + ("ใครทำอะไร" if TH else "👥 Who Does What"))
+
+            tier_ops = {
+                'lean': {
+                    'owner': '""" + ("เจ้าของโรงสี + ครอบครัว" if TH else "Mill owner + family") + """',
+                    'owner_role': '""" + ("ดูแลทุกอย่าง — บรรจุ, ฉีดน้ำ, เก็บเกี่ยว, แพ็ค" if TH else "Runs everything — bagging, misting, harvest, packaging") + """',
+                    'farmers': '""" + ("ส่งฟางพร้อมข้าว" if TH else "Deliver straw with rice, nothing else") + """',
+                    'workers': '""" + ("ไม่มี — ครอบครัวทำเอง" if TH else "None — family operation") + """',
+                },
+                'balanced': {
+                    'owner': '""" + ("เจ้าของโรงสี" if TH else "Mill owner") + """',
+                    'owner_role': '""" + ("ดูแลภาพรวม, ขาย, บัญชี" if TH else "Supervises, handles sales & accounting") + """',
+                    'farmers': '""" + ("ส่งฟาง, รับค่าฟาง + ปุ๋ยฟรี" if TH else "Deliver straw, get paid ฿3/kg + free compost") + """',
+                    'workers': '""" + ("1 คนจ้าง — บรรจุ, เก็บ, แพ็ค" if TH else "1 hired — bagging, harvesting, packaging") + """',
+                },
+                'full': {
+                    'owner': '""" + ("เจ้าของโรงสี / นักลงทุน" if TH else "Mill owner / investor") + """',
+                    'owner_role': '""" + ("บริหารธุรกิจ, ขยายตลาด" if TH else "Business management, market expansion") + """',
+                    'farmers': '""" + ("ส่งฟาง, รับค่าฟาง + ปุ๋ยฟรี" if TH else "Deliver straw, get paid ฿3/kg + free compost") + """',
+                    'workers': '""" + ("2 คนเต็มเวลา — ผลิต + เก็บ + แปรรูป" if TH else "2 full-time — production + harvest + processing") + """',
+                },
+            }
+            t_ops = tier_ops[tier]
+            st.markdown(f"""
+| """ + ("บทบาท" if TH else "Role") + """ | """ + ("หน้าที่" if TH else "Responsibility") + """ |
+|------|----------------|
+| 🏭 **{t_ops['owner']}** | {t_ops['owner_role']} |
+| 🌾 **""" + ("เกษตรกร" if TH else f"Farmers ({farmers})") + """** | {t_ops['farmers']} |
+| 👷 **""" + ("คนงาน" if TH else "Workers") + """** | {t_ops['workers']} |
+            """)
+
+            st.markdown("#### " + ("สิ่งที่เกษตรกรต้องทำ" if TH else "🎯 Key Advantage"))
+            st.success("**" + (
+                "เกษตรกรไม่ต้องเรียนรู้อะไรใหม่เลย — แค่ส่งฟางที่ปกติจะเผาทิ้ง แล้วรับเงิน"
+                if TH else
+                "Farmers don't learn anything new — they just deliver straw they'd normally burn, and get paid. All the mushroom expertise stays at the hub."
+            ) + "**")
+
+        st.divider()
+
         # Tier comparison chart
         st.subheader("📊 " + ("เปรียบเทียบ 3 ระดับ" if TH else "All 3 Tiers Compared"))
         tiers_data = r['all_tiers']
