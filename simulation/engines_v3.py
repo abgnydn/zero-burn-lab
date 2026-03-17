@@ -4721,6 +4721,10 @@ def compute_hub_at_mill(
     cycles_per_year: int = 5,
     hired_workers: int = 1,
     daily_wage: float = 370,
+    # ─── Owner-farmer mode ───
+    owner_is_farmer: bool = False,
+    owner_rai: float = 15,
+    rice_income_per_rai: float = 3333,  # ~฿50K for 15 rai
     # ─── Optimization levers ───
     opt_spawn_lab: bool = False,
     opt_lions_mane: bool = False,
@@ -4729,8 +4733,13 @@ def compute_hub_at_mill(
     opt_subscription: bool = False,
     opt_beta_glucan: bool = False,
     opt_export: bool = False,
+    # ─── Straw product levers ───
+    opt_pellets: bool = False,
+    opt_packaging: bool = False,
+    opt_straw_board: bool = False,
+    opt_biochar: bool = False,
 ) -> Dict:
-    """Hub-at-Mill with profit optimization levers."""
+    """Hub-at-Mill with profit optimization + straw product levers."""
 
     tiers = {
         'lean': {
@@ -4774,10 +4783,23 @@ def compute_hub_at_mill(
     if opt_lions_mane:
         extra_investment += 5000
 
-    total_investment = t['investment'] + extra_investment
 
-    # ─── Production ───
-    bags_year = bags_per_cycle * cycles_per_year
+    # ─── Production (capped by straw availability in owner mode) ───
+    max_bags_year = bags_per_cycle * cycles_per_year
+    max_substrate = max_bags_year * 2.5
+    straw_needed_for_max = max_substrate * 0.7
+
+    if owner_is_farmer:
+        available_straw = owner_rai * straw_per_rai
+        if available_straw < straw_needed_for_max:
+            # Scale production down to match available straw
+            scale = available_straw / straw_needed_for_max
+            bags_year = int(max_bags_year * scale)
+        else:
+            bags_year = max_bags_year
+    else:
+        bags_year = max_bags_year
+
     substrate_kg = bags_year * 2.5
     mushroom_kg = substrate_kg * (t['be_pct'] / 100) * (1 - t['contamination_pct'] / 100)
 
@@ -4818,8 +4840,60 @@ def compute_hub_at_mill(
         compost_revenue = substrate_kg * 0.8 * 5
         total_revenue += compost_revenue
 
+    # ─── Straw Products (use excess straw + spent substrate) ───
+    straw_for_mushrooms = substrate_kg * 0.7
+    if owner_is_farmer:
+        total_available_straw = owner_rai * straw_per_rai
+    else:
+        total_available_straw = n_farmers * rai_per_farmer * straw_per_rai
+    excess_straw = max(0, total_available_straw - straw_for_mushrooms)
+    spent_substrate = substrate_kg * 0.75  # post-mushroom, still useful
+
+    straw_products = {}
+    straw_product_investment = 0
+
+    if opt_pellets:
+        # Biomass pellets — compress excess straw, power plants buy
+        pellet_kg = excess_straw * 0.4  # 40% of excess → pellets
+        pellet_rev = pellet_kg * 2  # ฿2/kg pellets
+        straw_products['pellets'] = {'kg': round(pellet_kg), 'revenue': round(pellet_rev)}
+        total_revenue += pellet_rev
+        straw_product_investment += 35000  # pellet press
+
+    if opt_packaging:
+        # Bio-packaging — molded straw plates/containers
+        pack_kg = excess_straw * 0.3  # 30% of excess → packaging
+        pack_rev = pack_kg * 12  # ฿12/kg (high value)
+        straw_products['packaging'] = {'kg': round(pack_kg), 'revenue': round(pack_rev)}
+        total_revenue += pack_rev
+        straw_product_investment += 80000  # mold press
+
+    if opt_straw_board:
+        # Compressed straw boards (MDF alternative)
+        board_kg = excess_straw * 0.3  # 30% of excess → boards
+        board_rev = board_kg * 8  # ฿8/kg
+        straw_products['boards'] = {'kg': round(board_kg), 'revenue': round(board_rev)}
+        total_revenue += board_rev
+        straw_product_investment += 120000  # hydraulic press
+
+    if opt_biochar:
+        # Biochar from spent substrate + carbon credits
+        char_kg = spent_substrate * 0.25  # 25% conversion
+        char_rev = char_kg * 10  # ฿10/kg (biochar + carbon credit)
+        straw_products['biochar'] = {'kg': round(char_kg), 'revenue': round(char_rev)}
+        total_revenue += char_rev
+        straw_product_investment += 20000  # pyrolysis kiln
+
+    extra_investment += straw_product_investment
+    total_investment = t['investment'] + extra_investment
+
     # ─── Costs ───
-    straw_cost = substrate_kg * 0.7 * straw_buy_price
+    straw_needed_kg = substrate_kg * 0.7
+    rai_needed = straw_needed_kg / straw_per_rai
+    if owner_is_farmer:
+        straw_cost = 0  # own straw, free
+    else:
+        straw_cost = straw_needed_kg * straw_buy_price
     spawn_cost = bags_year * (3 if has_spawn else 8)
     labor_cost = t['hired'] * daily_wage * 300
     supplies_cost = bags_year * 1.5
@@ -4860,6 +4934,56 @@ def compute_hub_at_mill(
         levers.append({'name': '💊 Beta-Glucan (฿2K/kg)', 'boost': round(powder_kg * 1400), 'cost': 10000})
     if opt_export:
         levers.append({'name': '🇯🇵 Export (3× dried)', 'boost': round(dried_kg * dried_price * 2), 'cost': 0})
+    # Straw product levers
+    for sp_key, sp_name, sp_cost in [
+        ('pellets', '🔥 Biomass Pellets', 35000),
+        ('packaging', '📦 Bio-Packaging', 80000),
+        ('boards', '🧱 Straw Boards', 120000),
+        ('biochar', '🪨 Biochar+Carbon', 20000),
+    ]:
+        if sp_key in straw_products:
+            levers.append({'name': sp_name, 'boost': straw_products[sp_key]['revenue'], 'cost': sp_cost})
+
+    # ─── Income Model ───
+    if owner_is_farmer:
+        # Owner IS the farmer — they get ALL the mushroom profit + rice
+        owner_rice = owner_rai * rice_income_per_rai
+        owner_total = owner_rice + profit
+        farmer_income = {
+            'mode': 'owner',
+            'rice_income': round(owner_rice),
+            'mushroom_profit': round(profit),
+            'total': round(owner_total),
+            'monthly': round(owner_total / 12),
+            'vs_burning': round(owner_total - owner_rice),
+            'rai_needed': round(rai_needed, 1),
+            'rai_available': owner_rai,
+            'straw_sufficient': owner_rai >= rai_needed,
+        }
+        hub_net_after_sharing = profit  # owner keeps everything
+    else:
+        # Cooperative model — farmers share profits
+        profit_share_pct = 20
+        farmer_profit_share = (profit * profit_share_pct / 100) / n_farmers
+        compost_value_per_farmer = 3000
+        carbon_credit_per_farmer = 1500
+        avoided_fine = 5000
+        farmer_total = (farmer_straw_income + farmer_profit_share +
+                        compost_value_per_farmer + carbon_credit_per_farmer)
+        hub_net_after_sharing = profit * (1 - profit_share_pct / 100)
+        farmer_income = {
+            'mode': 'cooperative',
+            'straw_payment': round(farmer_straw_income),
+            'profit_share': round(farmer_profit_share),
+            'compost_value': compost_value_per_farmer,
+            'carbon_credit': carbon_credit_per_farmer,
+            'avoided_fine': avoided_fine,
+            'total': round(farmer_total),
+            'monthly': round(farmer_total / 12),
+            'vs_burning': round(farmer_total),
+            'profit_share_pct': profit_share_pct,
+            'rai_needed': round(rai_needed, 1),
+        }
 
     # All tiers (baseline)
     all_tiers = []
@@ -4900,6 +5024,452 @@ def compute_hub_at_mill(
         },
         'profit': round(profit), 'roi': round(roi, 1), 'breakeven_months': breakeven_months,
         'farmer_straw_income': round(farmer_straw_income),
+        'farmer_income': farmer_income,
+        'hub_net_after_sharing': round(hub_net_after_sharing),
         'base_profit': round(base_profit), 'profit_boost': round(profit - base_profit),
         'levers': levers, 'all_tiers': all_tiers, 'n_farmers': n_farmers,
+        'straw_products': straw_products, 'excess_straw': round(excess_straw),
+    }
+
+
+
+# ── LAB 48: BIO-PACKAGING CENTER ──
+def compute_bio_packaging_hub(
+    n_farmers: int = 30,
+    rai_per_farmer: float = 15,
+    straw_per_rai: float = 650,
+    straw_buy_price: float = 5,
+    # Equipment tier
+    tier: str = 'starter',  # starter, mid, industrial
+    # Product mix (pct of output)
+    pct_plates: float = 40,
+    pct_bowls: float = 30,
+    pct_trays: float = 20,
+    pct_containers: float = 10,
+    # Operations
+    daily_wage: float = 370,
+    days_per_year: int = 300,
+    # Owner mode
+    owner_is_farmer: bool = False,
+    owner_rai: float = 15,
+    # ─── Cost optimizers ───
+    opt_family_labor: bool = False,
+    opt_solar_drying: bool = False,
+    opt_biomass_fuel: bool = False,
+    opt_automation: bool = False,
+    opt_batch_schedule: bool = False,
+    # ─── Revenue boosters ───
+    opt_branding: bool = False,
+    opt_export: bool = False,
+    opt_certification: bool = False,
+    opt_delivery: bool = False,
+    # ─── Process & coverage ───
+    process_method: str = 'pulp',  # 'pulp', 'lime', 'direct'
+    service_radius_km: float = 15,
+    # ─── Platform owner ───
+    financing_model: str = 'revenue_share',  # 'revenue_share', 'kit_sale', 'installment'
+    revenue_share_pct: float = 35,  # platform owner's cut
+    n_hubs: int = 1,
+) -> Dict:
+    """Bio-Packaging Center: comprehensive feasibility calculator."""
+
+    tiers = {
+        'micro': {
+            'name': '🔧 Micro Hub', 'investment': 50000,
+            'capacity_kg_day': 80, 'workers': 1,
+            'yield_pct': 65, 'energy_per_kg': 1.0,
+            'equipment': 'Cement mixer + car jack press + concrete molds + fan dryer',
+            'hrs_per_day': 4, 'pieces_per_day': 250,
+        },
+        'starter': {
+            'name': '🌱 Starter', 'investment': 200000,
+            'capacity_kg_day': 200, 'workers': 2,
+            'yield_pct': 70, 'energy_per_kg': 2,
+            'equipment': 'Manual pulper + single mold press + solar dryer',
+            'hrs_per_day': 7, 'pieces_per_day': 750,
+        },
+        'mid': {
+            'name': '⚖️ Mid-Scale', 'investment': 500000,
+            'capacity_kg_day': 500, 'workers': 4,
+            'yield_pct': 78, 'energy_per_kg': 1.5,
+            'equipment': 'Semi-auto pulper + 4-mold press + gas dryer + hot press',
+            'hrs_per_day': 7, 'pieces_per_day': 2000,
+        },
+        'industrial': {
+            'name': '🏭 Industrial', 'investment': 1500000,
+            'capacity_kg_day': 2000, 'workers': 8,
+            'yield_pct': 85, 'energy_per_kg': 1.0,
+            'equipment': 'Full auto line + multi-mold + tunnel dryer + finishing',
+            'hrs_per_day': 4.5, 'pieces_per_day': 5000,
+        },
+    }
+    t = tiers[tier]
+
+    # ─── Straw supply (radius-aware) ───
+    import math
+    area_km2 = math.pi * service_radius_km ** 2
+    area_rai = area_km2 * 625  # 1 km² = 625 rai
+    farmland_rai = area_rai * 0.55  # ~55% rice fields
+    # Max farmers within radius: ~1 farmer per 15 rai
+    max_farmers_in_radius = max(1, round(farmland_rai / rai_per_farmer))
+
+    if owner_is_farmer:
+        total_straw = owner_rai * straw_per_rai
+        straw_cost_per_kg = 0  # own waste
+        effective_farmers = 1
+    else:
+        effective_farmers = min(n_farmers, max_farmers_in_radius)
+        total_straw = effective_farmers * rai_per_farmer * straw_per_rai
+        straw_cost_per_kg = straw_buy_price
+
+    n_farmers = effective_farmers  # update for downstream
+
+    # ─── Production ───
+    max_straw_per_year = t['capacity_kg_day'] * days_per_year
+    straw_used = min(max_straw_per_year, total_straw)
+    utilization = straw_used / max_straw_per_year if max_straw_per_year > 0 else 0
+
+    # Pulp yield: straw → usable pulp
+    pulp_kg = straw_used * (t['yield_pct'] / 100)
+    # Finished product (some loss in molding/trimming)
+    finished_kg = pulp_kg * 0.9
+
+    # ─── Product mix & pricing ───
+    products = {
+        'plates': {
+            'pct': pct_plates / 100, 'price_per_kg': 18,
+            'pieces_per_kg': 25, 'price_per_piece': 0.72,
+            'emoji': '🍽️', 'name_th': 'จาน', 'name_en': 'Plates',
+        },
+        'bowls': {
+            'pct': pct_bowls / 100, 'price_per_kg': 22,
+            'pieces_per_kg': 20, 'price_per_piece': 1.10,
+            'emoji': '🥣', 'name_th': 'ถ้วย', 'name_en': 'Bowls',
+        },
+        'trays': {
+            'pct': pct_trays / 100, 'price_per_kg': 15,
+            'pieces_per_kg': 10, 'price_per_piece': 1.50,
+            'emoji': '📦', 'name_th': 'ถาด', 'name_en': 'Trays',
+        },
+        'containers': {
+            'pct': pct_containers / 100, 'price_per_kg': 25,
+            'pieces_per_kg': 15, 'price_per_piece': 1.67,
+            'emoji': '🥡', 'name_th': 'กล่อง', 'name_en': 'Containers',
+        },
+    }
+
+    total_revenue = 0
+    product_details = []
+    for key, p in products.items():
+        kg = finished_kg * p['pct']
+        pieces = kg * p['pieces_per_kg']
+        rev = kg * p['price_per_kg']
+        total_revenue += rev
+        product_details.append({
+            'key': key, 'emoji': p['emoji'],
+            'name_en': p['name_en'], 'name_th': p['name_th'],
+            'kg': round(kg), 'pieces': round(pieces),
+            'revenue': round(rev), 'price_per_piece': p['price_per_piece'],
+        })
+
+    # ─── Costs (with optimizers) ───
+    raw_material_cost = straw_used * straw_cost_per_kg
+
+    # Labor
+    workers_needed = t['workers']
+    if opt_automation and workers_needed > 1:
+        workers_needed -= 1  # automation replaces 1 worker
+    if opt_family_labor:
+        labor_cost = 0  # family runs it, no hired wages
+    else:
+        labor_cost = workers_needed * daily_wage * days_per_year
+
+    # Energy
+    base_energy = straw_used * t['energy_per_kg']
+    energy_savings = 0
+    if opt_solar_drying:
+        energy_savings += base_energy * 0.60  # sun replaces 60% of dryer energy
+    if opt_biomass_fuel:
+        energy_savings += base_energy * 0.30  # burn own straw waste as fuel
+    if opt_batch_schedule:
+        energy_savings += base_energy * 0.15  # batch runs = less idle energy
+    energy_savings = min(energy_savings, base_energy * 0.85)  # cap at 85% savings
+    energy_cost = base_energy - energy_savings
+
+    chemicals_cost = pulp_kg * 0.5  # NaOH, starch, sizing
+    extra_invest = 0
+    if opt_solar_drying:
+        extra_invest += 30000  # solar dryer racks
+    if opt_automation:
+        extra_invest += 50000  # semi-auto upgrade
+    maintenance_cost = (t['investment'] + extra_invest) * 0.05
+    packaging_cost = finished_kg * 0.3
+    total_costs = (raw_material_cost + labor_cost + energy_cost +
+                   chemicals_cost + maintenance_cost + packaging_cost)
+
+    # Track savings for display
+    base_labor = t['workers'] * daily_wage * days_per_year
+    labor_saved = base_labor - labor_cost
+    energy_saved = energy_savings
+    total_saved = labor_saved + energy_saved
+
+    # ─── Process method adjustments ───
+    if process_method == 'lime':
+        chemicals_cost *= 0.20  # lime is 80% cheaper than NaOH
+    elif process_method == 'direct':
+        chemicals_cost = finished_kg * 1.5  # tapioca starch only, ฿1.5/kg
+
+    # Recalculate totals after process method
+    total_costs = (raw_material_cost + labor_cost + energy_cost +
+                   chemicals_cost + maintenance_cost + packaging_cost)
+
+    # ─── Revenue boosters ───
+    base_revenue = total_revenue
+    revenue_boosts = []
+    if opt_branding:
+        boost = total_revenue * 0.40
+        total_revenue += boost
+        extra_invest += 25000
+        revenue_boosts.append({'name': '🏷️ Brand Printing', 'boost': round(boost), 'invest': 25000})
+    if opt_export:
+        boost = base_revenue * 0.20 * 2  # 20% of output at 3× (net +2×)
+        total_revenue += boost
+        revenue_boosts.append({'name': '🇯🇵 Export Market', 'boost': round(boost), 'invest': 0})
+    if opt_certification:
+        boost = base_revenue * 0.25
+        total_revenue += boost
+        extra_invest += 15000
+        revenue_boosts.append({'name': '📜 Compostable Cert', 'boost': round(boost), 'invest': 15000})
+    if opt_delivery:
+        boost = base_revenue * 0.30
+        total_revenue += boost
+        revenue_boosts.append({'name': '🛵 Delivery Partner', 'boost': round(boost), 'invest': 0})
+
+    profit = total_revenue - total_costs
+    total_invest = t['investment'] + extra_invest
+    roi = profit / total_invest if total_invest > 0 else 0
+    breakeven_months = round(total_invest / (profit / 12)) if profit > 0 else 999
+
+    # ─── Seasonal Calendar ───
+    # Thai rice farming: plant Jun-Jul, harvest Nov-Dec, 2nd crop Jan-May
+    months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    farm_busy =    [0.2, 0.1, 0.1, 0.1, 0.3, 0.9, 0.9, 0.7, 0.5, 0.2, 0.8, 0.9]
+    straw_avail =  [1.0, 1.0, 0.7, 0.5, 0.4, 0.0, 0.0, 0.3, 0.8, 1.0, 1.0, 1.0]
+    solar_good =   [0.8, 0.9, 1.0, 1.0, 0.9, 0.4, 0.3, 0.4, 0.4, 0.7, 0.8, 0.8]
+
+    seasonal = []
+    total_work_days = 0
+    total_work_hrs = 0
+    total_pieces_yr = 0
+    for i, mo in enumerate(months):
+        pack_avail = 1.0 - farm_busy[i]  # time available for packaging
+        days_this_mo = round(25 * pack_avail * straw_avail[i])
+        hrs_this_mo = round(days_this_mo * t.get('hrs_per_day', 6))
+        pieces = round(days_this_mo * t.get('pieces_per_day', 500))
+        total_work_days += days_this_mo
+        total_work_hrs += hrs_this_mo
+        total_pieces_yr += pieces
+        seasonal.append({
+            'month': mo, 'farm_busy': farm_busy[i],
+            'pack_days': days_this_mo, 'work_hrs': hrs_this_mo,
+            'pieces': pieces, 'straw': straw_avail[i], 'solar': solar_good[i],
+        })
+
+    # ─── Coverage & Demand ───
+    # area_km2, farmland_rai already computed above
+    straw_in_radius = farmland_rai * straw_per_rai
+    hub_needs = straw_used
+    coverage_pct = (hub_needs / straw_in_radius * 100) if straw_in_radius > 0 else 0
+    restaurants_in_radius = round(area_km2 * 0.5)
+    demand_pieces_mo = restaurants_in_radius * 2000
+    supply_pieces_mo = total_pieces_yr / 12
+    demand_met_pct = min(100, round(supply_pieces_mo / max(demand_pieces_mo, 1) * 100))
+
+    # ─── Work Hours Summary ───
+    baht_per_hr = round(profit / max(total_work_hrs, 1)) if profit > 0 else 0
+
+    # ─── Health Impact ───
+    straw_diverted_tons = straw_used / 1000
+    co2_prevented = straw_diverted_tons * 1.5  # tons CO2
+    pm25_prevented = straw_diverted_tons * 0.013  # tons PM2.5
+    people_health_benefit = round(straw_diverted_tons * 5)  # ~5 people per ton
+    healthcare_savings = straw_diverted_tons * 15000  # ฿15K per ton
+    carbon_credit_value = co2_prevented * 1000  # ~฿1000/ton CO2
+
+    # ─── Farmer Income ───
+    if owner_is_farmer:
+        rice_income = owner_rai * 3333
+        farmer_total = rice_income + profit
+        farmer_monthly = farmer_total / 12
+        farmer_income = {
+            'mode': 'owner',
+            'rice_income': round(rice_income),
+            'packaging_profit': round(profit),
+            'total': round(farmer_total),
+            'monthly': round(farmer_monthly),
+            'straw_used_rai': round(straw_used / straw_per_rai, 1),
+        }
+    else:
+        farmer_straw_income = (straw_used * straw_buy_price) / n_farmers
+        farmer_income = {
+            'mode': 'cooperative',
+            'straw_income': round(farmer_straw_income),
+            'monthly': round(farmer_straw_income / 12),
+            'total': round(farmer_straw_income),
+        }
+
+    # ─── Compare all tiers ───
+    all_tiers = []
+    for key, ti in tiers.items():
+        cap = ti['capacity_kg_day'] * days_per_year
+        su = min(cap, total_straw)
+        pk = su * (ti['yield_pct'] / 100) * 0.9
+        rev = pk * 18  # avg price estimate
+        rc = su * straw_cost_per_kg
+        lc = ti['workers'] * daily_wage * days_per_year
+        ec = su * ti['energy_per_kg']
+        tc = rc + lc + ec + pk * 0.5 + ti['investment'] * 0.05 + pk * 0.3
+        pr = rev - tc
+        all_tiers.append({
+            'key': key, 'name': ti['name'],
+            'investment': ti['investment'],
+            'capacity': f"{ti['capacity_kg_day']} kg/day",
+            'revenue': round(rev), 'costs': round(tc),
+            'profit': round(pr),
+            'roi': round(pr / ti['investment'], 1) if ti['investment'] > 0 else 0,
+            'workers': ti['workers'],
+        })
+
+    return {
+        'tier': t, 'investment': t['investment'] + extra_invest,
+        'base_investment': t['investment'], 'extra_investment': extra_invest,
+        'production': {
+            'straw_used': round(straw_used),
+            'pulp_kg': round(pulp_kg),
+            'finished_kg': round(finished_kg),
+            'utilization': round(utilization * 100),
+        },
+        'products': product_details,
+        'revenue': round(total_revenue),
+        'costs': {
+            'straw': round(raw_material_cost),
+            'labor': round(labor_cost),
+            'energy': round(energy_cost),
+            'chemicals': round(chemicals_cost),
+            'maintenance': round(maintenance_cost),
+            'packaging': round(packaging_cost),
+            'total': round(total_costs),
+        },
+        'savings': {
+            'labor': round(labor_saved),
+            'energy': round(energy_saved),
+            'total': round(total_saved),
+            'base_labor': round(base_labor),
+            'base_energy': round(base_energy) if 'base_energy' in dir() else round(straw_used * t['energy_per_kg']),
+        },
+        'profit': round(profit),
+        'roi': round(roi, 1),
+        'breakeven_months': breakeven_months,
+        'health': {
+            'straw_diverted_tons': round(straw_diverted_tons, 1),
+            'co2_prevented': round(co2_prevented, 1),
+            'pm25_prevented_kg': round(pm25_prevented * 1000, 1),
+            'people_benefit': people_health_benefit,
+            'healthcare_savings': round(healthcare_savings),
+            'carbon_credit': round(carbon_credit_value),
+        },
+        'farmer_income': farmer_income,
+        'all_tiers': all_tiers,
+        'n_farmers': n_farmers,
+        'total_straw_available': round(total_straw),
+        'revenue_boosts': revenue_boosts,
+        'process_method': process_method,
+        'seasonal': seasonal,
+        'work_hours': {
+            'total_days': total_work_days,
+            'total_hrs': total_work_hrs,
+            'total_pieces': total_pieces_yr,
+            'hrs_per_day': t.get('hrs_per_day', 6),
+            'baht_per_hr': baht_per_hr,
+        },
+        'coverage': {
+            'radius_km': service_radius_km,
+            'area_km2': round(area_km2),
+            'farmland_rai': round(farmland_rai),
+            'straw_in_radius': round(straw_in_radius),
+            'hub_needs': round(hub_needs),
+            'coverage_pct': round(coverage_pct, 2),
+            'restaurants': restaurants_in_radius,
+            'demand_pieces_mo': round(demand_pieces_mo),
+            'supply_pieces_mo': round(supply_pieces_mo),
+            'demand_met_pct': demand_met_pct,
+            'max_farmers': max_farmers_in_radius,
+        },
+        'platform': _calc_platform_income(
+            financing_model, revenue_share_pct, n_hubs,
+            total_revenue, profit, total_invest,
+        ),
+    }
+
+
+def _calc_platform_income(model, share_pct, n_hubs, hub_revenue, hub_profit, hub_invest):
+    """Calculate platform owner's income from multiple hubs."""
+    kit_cost = hub_invest  # cost to build one hub
+    kit_markup = 0.50  # 50% markup on kit sales
+
+    if model == 'revenue_share':
+        owner_per_hub = hub_revenue * (share_pct / 100)
+        farmer_per_hub = hub_revenue - owner_per_hub - (hub_revenue - hub_profit)  # farmer gets rest after costs
+        owner_invest_per_hub = kit_cost  # owner pays for equipment
+        owner_description = f"You provide equipment, take {share_pct:.0f}% of revenue"
+    elif model == 'kit_sale':
+        owner_per_hub = kit_cost * kit_markup  # one-time margin
+        farmer_per_hub = hub_profit
+        owner_invest_per_hub = kit_cost  # cost of goods
+        owner_description = f"Sell ฿{kit_cost:,.0f} kits at {kit_markup*100:.0f}% markup"
+    else:  # installment
+        monthly_payment = kit_cost / 10
+        owner_per_hub = monthly_payment * 12  # first year: farmer pays full
+        farmer_per_hub = hub_profit - (monthly_payment * 12)
+        owner_invest_per_hub = kit_cost
+        owner_description = f"Farmer pays ฿{monthly_payment:,.0f}/mo × 10 months"
+
+    total_owner_invest = owner_invest_per_hub * n_hubs
+    total_owner_income = owner_per_hub * n_hubs
+    total_farmer_income = max(0, farmer_per_hub) * n_hubs
+    owner_roi = total_owner_income / max(total_owner_invest, 1)
+    owner_payback = round(total_owner_invest / max(total_owner_income / 12, 1)) if total_owner_income > 0 else 999
+
+    # 5-year projection
+    projection = []
+    cumulative = -total_owner_invest
+    for yr in range(1, 6):
+        if model == 'kit_sale' and yr > 1:
+            yr_income = 0  # kit sale is one-time
+        else:
+            yr_income = total_owner_income
+        cumulative += yr_income
+        projection.append({
+            'year': yr, 'income': round(yr_income),
+            'cumulative': round(cumulative),
+            'hubs': n_hubs,
+        })
+
+    return {
+        'model': model,
+        'description': owner_description,
+        'n_hubs': n_hubs,
+        'per_hub': {
+            'owner_income': round(owner_per_hub),
+            'farmer_income': round(max(0, farmer_per_hub)),
+            'owner_invest': round(owner_invest_per_hub),
+        },
+        'total': {
+            'invest': round(total_owner_invest),
+            'income': round(total_owner_income),
+            'farmer_total': round(total_farmer_income),
+            'roi': round(owner_roi, 1),
+            'payback_months': owner_payback,
+        },
+        'projection': projection,
     }

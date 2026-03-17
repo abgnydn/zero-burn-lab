@@ -40,7 +40,7 @@ from engines_v3 import (
     compute_ecommerce_channels, compute_solar_energy, compute_beta_glucan,
     compute_pilot_roadmap,
     compute_water_management, compute_climate_resilience, compute_labor_allocation,
-    compute_hub_at_mill,
+    compute_hub_at_mill, compute_bio_packaging_hub,
     DEFAULT_TUBE_ID, DEFAULT_TUBE_OD, DEFAULT_COIL_DIAM,
 )
 from references import render_references
@@ -131,11 +131,12 @@ lab = st.sidebar.radio("Select Lab:", [
     "👷 Labor Allocation",
     "─── Hub Model ───",
     "🏭 Hub-at-Mill",
+    "📦 Bio-Packaging Hub",
 ], index=0)
 
 st.sidebar.divider()
-st.sidebar.caption("v4.1 — 11 Rounds + Hub Model")
-st.sidebar.caption("47 Labs • 80+ References • Thai/English")
+st.sidebar.caption("v4.2 — 11 Rounds + Hub + Bio-Pack")
+st.sidebar.caption("48 Labs • 80+ References • Thai/English")
 
 
 # ================================================================
@@ -3365,9 +3366,17 @@ elif lab == "🏭 Hub-at-Mill":
         st.subheader("⚙️")
         tier = st.radio("Investment Tier", ['lean', 'balanced', 'full'],
                        format_func=lambda x: {'lean': '🌱 Lean (฿50K)', 'balanced': '⚖️ Balanced (฿250K)', 'full': '🏭 Full (฿751K)'}[x], key="ham_t")
-        farmers = st.slider("Farmers in radius", 10, 50, 30, key="ham_f")
-        straw_price = st.slider("Pay/kg straw (฿)", 1, 5, 3, key="ham_sp")
-        pct_dried = st.slider("% dried products", 10, 80, 30, key="ham_pd")
+
+        st.divider()
+        owner_mode = st.toggle("👨‍🌾 " + ("เจ้าของ = เกษตรกร" if TH else "Owner IS the farmer"), value=(tier == 'lean'), key="ham_om")
+
+        if owner_mode:
+            own_rai = st.slider("🌾 " + ("ที่นาตัวเอง (ไร่)" if TH else "Own rice field (rai)"), 5, 50, 15, key="ham_or")
+        else:
+            farmers = st.slider("Farmers in radius", 10, 50, 30, key="ham_f")
+            straw_price = st.slider("Pay/kg straw (฿)", 1, 5, 3, key="ham_sp")
+
+        pct_dried = st.slider("% " + ("ตากแห้ง" if TH else "dried products"), 10, 80, 30, key="ham_pd")
 
         st.divider()
         st.markdown("#### 🚀 " + ("ตัวเร่งกำไร" if TH else "Profit Boosters"))
@@ -3379,10 +3388,23 @@ elif lab == "🏭 Hub-at-Mill":
         o_beta = st.checkbox("💊 " + ("เบต้ากลูแคน" if TH else "Beta-Glucan (฿2K/kg)"), key="ho_bg")
         o_export = st.checkbox("🇯🇵 " + ("ส่งออก 3x ราคา" if TH else "Export (3× dried price)"), key="ho_ex")
 
+        st.divider()
+        st.markdown("#### 🌾 " + ("ผลิตภัณฑ์ฟาง" if TH else "Straw Products"))
+        o_pellets = st.checkbox("🔥 " + ("เม็ดเชื้อเพลิง" if TH else "Biomass Pellets (฿2/kg)"), key="ho_pl")
+        o_packaging = st.checkbox("📦 " + ("บรรจุภัณฑ์ย่อยสลาย" if TH else "Bio-Packaging (฿12/kg)"), key="ho_pk")
+        o_boards = st.checkbox("🧱 " + ("แผ่นฟางอัด" if TH else "Straw Boards (฿8/kg)"), key="ho_sb")
+        o_biochar = st.checkbox("🪨 " + ("ถ่านชีวภาพ+คาร์บอน" if TH else "Biochar+Carbon (฿10/kg)"), key="ho_bc")
+
     r = compute_hub_at_mill(
-        tier=tier, n_farmers=farmers, straw_buy_price=straw_price, pct_dried=pct_dried,
+        tier=tier,
+        n_farmers=1 if owner_mode else farmers,
+        straw_buy_price=0 if owner_mode else straw_price,
+        pct_dried=pct_dried,
+        owner_is_farmer=owner_mode,
+        owner_rai=own_rai if owner_mode else 15,
         opt_spawn_lab=o_spawn, opt_lions_mane=o_lion, opt_extra_tiers=o_tiers,
         opt_compost=o_compost, opt_subscription=o_sub, opt_beta_glucan=o_beta, opt_export=o_export,
+        opt_pellets=o_pellets, opt_packaging=o_packaging, opt_straw_board=o_boards, opt_biochar=o_biochar,
     )
 
     with col2:
@@ -3536,10 +3558,11 @@ if TH else
 | **Total** | **฿{c['total']:,}** |
             """)
 
-            st.markdown("### 🌾 " + ("รายได้เกษตรกร" if TH else "Farmer Income"))
-            st.metric(f"Per farmer ({farmers} farmers)", f"฿{r['farmer_straw_income']:,}/yr",
-                     delta="Passive — just sell straw")
-            st.caption("On top of rice income. Zero training needed.")
+            if not owner_mode:
+                st.markdown("### 🌾 " + ("รายได้เกษตรกร" if TH else "Farmer Income"))
+                st.metric(f"Per farmer ({r['n_farmers']} farmers)", f"฿{r['farmer_straw_income']:,}/yr",
+                         delta="Passive — just sell straw")
+                st.caption("On top of rice income. Zero training needed.")
 
         st.divider()
 
@@ -3579,15 +3602,163 @@ if TH else
             )
             st.plotly_chart(fig_lever, use_container_width=True)
 
-            # Lever detail table
-            st.markdown("| " + ("ตัวเร่ง" if TH else "Lever") + " | " + ("กำไรเพิ่ม" if TH else "Profit Boost") + " | " + ("ลงทุนเพิ่ม" if TH else "Extra Investment") + " | " + ("ROI ตัวเร่ง" if TH else "Lever ROI") + " |")
-            st.markdown("|--------|-------------|-----------------|-----------|")
-            for l in r['levers']:
-                lroi = f"{l['boost'] / l['cost']:.0f}×" if l['cost'] > 0 else "∞ (free)"
-                st.markdown(f"| {l['name']} | +฿{l['boost']:,} | ฿{l['cost']:,} | **{lroi}** |")
-            st.markdown(f"| **TOTAL** | **+฿{r['profit_boost']:,}** | **฿{r['extra_investment']:,}** | **{r['profit_boost'] / r['extra_investment']:.0f}×** |" if r['extra_investment'] > 0 else f"| **TOTAL** | **+฿{r['profit_boost']:,}** | **฿0** | **∞** |")
+            # Lever detail table — styled DataFrame
+            lever_df = pd.DataFrame([{
+                ('ตัวเร่ง' if TH else 'Lever'): l['name'],
+                ('กำไรเพิ่ม/ปี' if TH else 'Boost/yr'): f"฿{l['boost']:,}",
+                ('ลงทุน' if TH else 'Invest'): f"฿{l['cost']:,}" if l['cost'] > 0 else "Free ✅",
+                ('ROI'): f"{l['boost'] // l['cost']}×" if l['cost'] > 0 else "∞",
+            } for l in r['levers']])
+            st.dataframe(lever_df, use_container_width=True, hide_index=True)
 
             st.divider()
+
+        # ─── Income Model (conditional on mode) ───
+        fi = r['farmer_income']
+
+        if fi.get('mode') == 'owner':
+            # ─── OWNER-FARMER MODE ───
+            st.subheader("👨‍🌾 " + ("รายได้เจ้าของ-เกษตรกร" if TH else "Owner-Farmer Income"))
+            st.markdown("> " + ("เจ้าของโรงสีทำเองทั้งหมด — ฟางฟรี, กำไรเห็ดทั้งหมดเป็นของตัวเอง" if TH else
+                               "Mill owner runs the hub themselves — straw is FREE (own waste), ALL mushroom profit stays with you."))
+
+            oi1, oi2 = st.columns(2)
+            with oi1:
+                # Rai needed check
+                if fi['straw_sufficient']:
+                    st.success(f"🌾 " + ("ที่นาเพียงพอ!" if TH else "Straw sufficient!") +
+                              f" — " + ("ต้องการ" if TH else "Need") + f" {fi['rai_needed']} rai, " +
+                              ("มี" if TH else "have") + f" {fi['rai_available']} rai ✅")
+                else:
+                    st.error(f"⚠️ " + ("ที่นาไม่พอ!" if TH else "Need more land!") +
+                            f" — " + ("ต้องการ" if TH else "Need") + f" {fi['rai_needed']} rai, " +
+                            ("มีแค่" if TH else "only have") + f" {fi['rai_available']} rai")
+
+                owner_df = pd.DataFrame([
+                    {"Income": "🌾 " + ("ข้าว" if TH else "Rice"), "฿/yr": f"฿{fi['rice_income']:,}", "Note": f"{fi['rai_available']} rai"},
+                    {"Income": "🍄 " + ("เห็ด" if TH else "Mushroom Profit"), "฿/yr": f"฿{fi['mushroom_profit']:,}", "Note": "Straw = FREE"},
+                    {"Income": "**" + ("รวม" if TH else "TOTAL") + "**", "฿/yr": f"**฿{fi['total']:,}**", "Note": f"฿{fi['monthly']:,}/mo"},
+                ])
+                st.dataframe(owner_df, use_container_width=True, hide_index=True)
+
+            with oi2:
+                # Before vs After
+                rice_only = fi['rice_income']
+                fig_owner = go.Figure()
+                fig_owner.add_trace(go.Bar(
+                    x=["🔥 " + ("เผาฟาง" if TH else "Rice Only (burn)")],
+                    y=[rice_only], marker_color='#ef4444',
+                    text=[f"฿{rice_only:,}"], textposition='outside',
+                    textfont=dict(size=14, color='white'),
+                ))
+                fig_owner.add_trace(go.Bar(
+                    x=["🍄 " + ("ข้าว+เห็ด" if TH else "Rice + Mushroom Hub")],
+                    y=[fi['total']], marker_color='#10b981',
+                    text=[f"฿{fi['total']:,}"], textposition='outside',
+                    textfont=dict(size=14, color='white'),
+                ))
+                fig_owner.update_layout(
+                    height=300, template='plotly_dark',
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                    yaxis_title="฿/yr", showlegend=False, margin=dict(t=10, b=10),
+                )
+                st.plotly_chart(fig_owner, use_container_width=True)
+
+                uplift = fi['total'] / max(rice_only, 1)
+                st.metric("Income Multiplier", f"{uplift:.1f}×",
+                          delta=f"+฿{fi['vs_burning']:,}/yr from mushrooms")
+
+        else:
+            # ─── COOPERATIVE MODE ───
+            st.subheader("🤝 " + ("รายได้สหกรณ์ — เกษตรกร vs ศูนย์กลาง" if TH else "Cooperative Model — Farmer vs Hub Income"))
+            st.markdown("> " + ("เกษตรกรไม่ใช่แค่ขายฟาง — เป็นหุ้นส่วนสหกรณ์ที่ได้รับ 5 ช่องทางรายได้" if TH else
+                               "Farmers aren't just selling straw — they're cooperative partners earning from **5 income streams**."))
+
+            fi1, fi2 = st.columns(2)
+            with fi1:
+                st.markdown("#### 🏭 " + ("ศูนย์กลาง (Hub)" if TH else "Hub Owner"))
+                st.metric("Gross Profit", f"฿{r['profit']:,}/yr")
+                st.metric(f"→ 20% Shared to {r['n_farmers']} farmers", f"-฿{round(r['profit'] * 0.2):,}/yr")
+                st.metric("Hub Net After Sharing", f"฿{r['hub_net_after_sharing']:,}/yr",
+                          delta=f"฿{r['hub_net_after_sharing'] // 12:,}/mo")
+
+            with fi2:
+                st.markdown("#### 🌾 " + (f"เกษตรกรแต่ละคน ({r['n_farmers']} คน)" if TH else f"Each Farmer ({r['n_farmers']} total)"))
+                farmer_df = pd.DataFrame([
+                    {"Income Stream": "🌾 " + ("ค่าฟาง" if TH else "Straw Payment"), "฿/yr": f"฿{fi['straw_payment']:,}"},
+                    {"Income Stream": "💰 " + ("ส่วนแบ่งกำไร 20%" if TH else "Profit Share (20%)"), "฿/yr": f"฿{fi['profit_share']:,}"},
+                    {"Income Stream": "♻️ " + ("ปุ๋ยฟรี" if TH else "Free Compost"), "฿/yr": f"฿{fi['compost_value']:,}"},
+                    {"Income Stream": "🌍 " + ("คาร์บอนเครดิต" if TH else "Carbon Credit"), "฿/yr": f"฿{fi['carbon_credit']:,}"},
+                    {"Income Stream": "🏛️ " + ("หลีกเลี่ยงค่าปรับ" if TH else "Avoided Fine"), "฿/yr": f"฿{fi['avoided_fine']:,}"},
+                ])
+                st.dataframe(farmer_df, use_container_width=True, hide_index=True)
+                st.metric("TOTAL Per Farmer", f"฿{fi['total']:,}/yr", delta=f"฿{fi['monthly']:,}/mo")
+
+                st.caption(f"🌾 " + ("ต้องการ" if TH else "Need") + f" {fi['rai_needed']} rai " +
+                          ("ทั้งหมดจากเกษตรกร" if TH else "total straw from all farmers"))
+
+        # ─── Adoption Gauge ───
+        st.markdown("#### " + ("โอกาสเปลี่ยนพฤติกรรม" if TH else "🎯 Adoption Likelihood"))
+        farmer_mo = fi['monthly']
+
+        if fi.get('mode') == 'owner':
+            # Owner mode: show income vs rice-only baseline
+            rice_mo = fi['rice_income'] // 12
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=farmer_mo,
+                number={'prefix': '฿', 'suffix': '/mo', 'font': {'size': 36}},
+                title={'text': ('รายได้รวม ข้าว+เห็ด' if TH else 'Total Income (Rice + Mushroom)'), 'font': {'size': 16}},
+                gauge={
+                    'axis': {'range': [0, max(farmer_mo * 1.5, 15000)], 'tickprefix': '฿'},
+                    'bar': {'color': '#10b981'},
+                    'steps': [
+                        {'range': [0, rice_mo], 'color': 'rgba(239,68,68,0.3)'},
+                        {'range': [rice_mo, farmer_mo], 'color': 'rgba(16,185,129,0.3)'},
+                    ],
+                    'threshold': {'line': {'color': 'white', 'width': 3}, 'thickness': 0.8, 'value': rice_mo},
+                },
+            ))
+            fig_gauge.update_layout(height=280, template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)',
+                                   margin=dict(t=60, b=10, l=30, r=30))
+            st.plotly_chart(fig_gauge, use_container_width=True)
+            st.success("✅ " + ("เจ้าของไม่ต้องเปลี่ยนพฤติกรรม — แค่เพิ่มเห็ดเป็นรายได้เสริม" if TH else
+                       f"No adoption barrier — owner just adds mushrooms to existing farm. Income jumps from ฿{rice_mo:,} to ฿{farmer_mo:,}/mo ({farmer_mo / max(rice_mo, 1):.1f}×)"))
+        else:
+            # Cooperative mode: threshold gauge
+            threshold = 1500
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number+delta",
+                value=farmer_mo,
+                number={'prefix': '฿', 'suffix': '/mo', 'font': {'size': 36}},
+                delta={'reference': threshold, 'valueformat': ',.0f', 'prefix': '฿'},
+                title={'text': ('รายได้เกษตรกร vs ขั้นต่ำ ฿1,500/เดือน' if TH else
+                               'Farmer Income vs ฿1,500/mo Threshold'), 'font': {'size': 16}},
+                gauge={
+                    'axis': {'range': [0, 3000], 'tickprefix': '฿', 'dtick': 500},
+                    'bar': {'color': '#10b981' if farmer_mo >= threshold else '#ef4444'},
+                    'steps': [
+                        {'range': [0, 800], 'color': 'rgba(239,68,68,0.3)'},
+                        {'range': [800, 1500], 'color': 'rgba(245,158,11,0.3)'},
+                        {'range': [1500, 3000], 'color': 'rgba(16,185,129,0.3)'},
+                    ],
+                    'threshold': {'line': {'color': 'white', 'width': 3}, 'thickness': 0.8, 'value': threshold},
+                },
+            ))
+            fig_gauge.update_layout(height=280, template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)',
+                                   margin=dict(t=60, b=10, l=30, r=30))
+            st.plotly_chart(fig_gauge, use_container_width=True)
+
+            if farmer_mo >= 2000:
+                st.success("✅ **" + ("เกษตรกรจะแย่งกันเข้าร่วม" if TH else "STRONG ADOPTION") + f"** — ฿{farmer_mo:,}/mo")
+            elif farmer_mo >= threshold:
+                st.info("⚠️ **" + ("พอไหว — ต้องมีแรงกดดัน" if TH else "BORDERLINE") + f"** — ฿{farmer_mo:,}/mo")
+            elif farmer_mo >= 800:
+                st.warning("⚠️ **" + ("อ่อน — เฉพาะกลัวปรับ" if TH else "WEAK") + f"** — ฿{farmer_mo:,}/mo")
+            else:
+                st.error("❌ **" + ("ไม่เปลี่ยน" if TH else "NO ADOPTION") + f"** — ฿{farmer_mo:,}/mo")
+
+        st.divider()
 
         with st.expander("🚀 Recommended Scaling Path"):
             st.markdown("""
@@ -3603,3 +3774,611 @@ if TH else
             """)
 
     render_references("🏭 Hub-at-Mill")
+
+# ══════════════════════════════════════════════════════════════════
+# LAB 48: BIO-PACKAGING HUB
+# ══════════════════════════════════════════════════════════════════
+elif lab == "📦 Bio-Packaging Hub":
+    st.title("📦 " + ("ศูนย์บรรจุภัณฑ์ชีวภาพจากฟาง" if TH else "Bio-Packaging Hub"))
+    st.markdown("*" + ("เปลี่ยนฟางข้าวเป็นจาน/ถ้วย/ถาดย่อยสลายได้ — ลดมลพิษ, สร้างรายได้ให้เกษตรกร" if TH else
+                       "Turn rice straw into biodegradable plates, bowls & containers — reduce pollution, pay farmers.") + "*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️")
+        bp_tier = st.radio("Equipment Tier", ['micro', 'starter', 'mid', 'industrial'],
+                          format_func=lambda x: {'micro': '🔧 Micro (฿50K)', 'starter': '🌱 Starter (฿200K)', 'mid': '⚖️ Mid (฿500K)', 'industrial': '🏭 Industrial (฿1.5M)'}[x], key="bp_t")
+
+        st.divider()
+        bp_process = st.radio("🧪 " + ("วิธีการผลิต" if TH else "Process Method"),
+                             ['pulp', 'lime', 'direct'],
+                             format_func=lambda x: {'pulp': '🧪 NaOH Pulp', 'lime': '🍋 Lime Water (cheap)', 'direct': '🌾 Direct Press (fastest)'}[x], key="bp_pm")
+
+        st.divider()
+        if bp_tier in ('micro', 'starter'):
+            bp_owner = st.toggle("👨‍🌾 " + ("เจ้าของ = เกษตรกร" if TH else "Owner IS the farmer"), value=False, key="bp_om")
+        else:
+            bp_owner = False
+            st.caption("👨‍🌾 " + ("ระดับนี้ต้องซื้อฟางจากเกษตรกร" if TH else "Mid/Industrial: buys straw from farmers"))
+
+        if bp_owner:
+            bp_rai = st.slider("🌾 " + ("ที่นา (ไร่)" if TH else "Own farm (rai)"), 5, 100, 30, key="bp_or")
+        else:
+            bp_farmers = st.slider("👨‍🌾 " + ("เกษตรกร" if TH else "Farmers"), 10, 100, 30, key="bp_f")
+            bp_straw_price = st.slider("฿/kg " + ("ค่าฟาง" if TH else "straw price"), 3, 10, 5, key="bp_sp")
+
+        st.divider()
+        bp_radius = st.slider("🗺️ " + ("รัศมีบริการ" if TH else "Service Radius (km)"), 5, 50, 15, key="bp_rad")
+
+        st.divider()
+        st.markdown("#### 🍽️ " + ("สัดส่วนผลิตภัณฑ์" if TH else "Product Mix"))
+        bp_plates = st.slider("🍽️ " + ("จาน" if TH else "Plates %"), 0, 100, 40, key="bp_pl")
+        bp_bowls = st.slider("🥣 " + ("ถ้วย" if TH else "Bowls %"), 0, 100, 30, key="bp_bo")
+        bp_trays = st.slider("📦 " + ("ถาด" if TH else "Trays %"), 0, 100, 20, key="bp_tr")
+        bp_containers = 100 - bp_plates - bp_bowls - bp_trays
+        if bp_containers < 0:
+            st.error("Total > 100%! Adjust sliders.")
+            bp_containers = 0
+        st.caption(f"🥡 " + ("กล่อง" if TH else "Containers") + f": {bp_containers}%")
+
+        st.divider()
+        st.markdown("#### 💡 " + ("ลดต้นทุน" if TH else "Cost Optimizers"))
+        bp_family = st.checkbox("👨‍👩‍👧 " + ("แรงงานครอบครัว" if TH else "Family Labor (฿0 wages)"), key="bp_fl")
+        bp_solar = st.checkbox("☀️ " + ("ตากแดดแทนเตาแก๊ส" if TH else "Solar Drying (-60% energy)"), key="bp_sd")
+        bp_biomass = st.checkbox("🔥 " + ("เชื้อเพลิงจากฟาง" if TH else "Biomass Fuel (-30% energy)"), key="bp_bf")
+        bp_auto = st.checkbox("🤖 " + ("ระบบกึ่งอัตโนมัติ" if TH else "Automation (-1 worker)"), key="bp_au")
+        bp_batch = st.checkbox("📅 " + ("ผลิตเป็นรอบ" if TH else "Batch Scheduling (-15% energy)"), key="bp_bs")
+
+        st.divider()
+        st.markdown("#### 📈 " + ("เพิ่มรายได้" if TH else "Revenue Boosters"))
+        bp_brand = st.checkbox("🏷️ " + ("พิมพ์โลโก้ +40%" if TH else "Brand Printing (+40%)"), key="bp_br")
+        bp_export = st.checkbox("🇯🇵 " + ("ส่งออก 3x" if TH else "Export Market (3× price)"), key="bp_ex")
+        bp_cert = st.checkbox("📜 " + ("ใบรับรอง +25%" if TH else "Compostable Cert (+25%)"), key="bp_ce")
+        bp_deliv = st.checkbox("🛵 " + ("พาร์ทเนอร์เดลิเวอรี่" if TH else "Delivery Partner (+30%)"), key="bp_dl")
+
+        st.divider()
+        st.markdown("#### 💼 " + ("เจ้าของแพลตฟอร์ม" if TH else "Platform Owner"))
+        bp_finance = st.radio("💰 " + ("โมเดลธุรกิจ" if TH else "Financing"),
+                             ['revenue_share', 'kit_sale', 'installment'],
+                             format_func=lambda x: {'revenue_share': '🤝 Revenue Share', 'kit_sale': '🧰 Kit Sale', 'installment': '📅 Installments'}[x], key="bp_fin")
+        if bp_finance == 'revenue_share':
+            bp_share = st.slider("📊 " + ("ส่วนแบ่ง %" if TH else "Your Share %"), 10, 50, 35, key="bp_sh")
+        else:
+            bp_share = 35
+        bp_hubs = st.slider("🏭 " + ("จำนวนฮับ" if TH else "Number of Hubs"), 1, 50, 5, key="bp_nh")
+
+    r = compute_bio_packaging_hub(
+        tier=bp_tier,
+        n_farmers=1 if bp_owner else bp_farmers,
+        straw_buy_price=0 if bp_owner else bp_straw_price,
+        pct_plates=bp_plates, pct_bowls=bp_bowls, pct_trays=bp_trays,
+        pct_containers=max(0, bp_containers),
+        owner_is_farmer=bp_owner,
+        owner_rai=bp_rai if bp_owner else 15,
+        opt_family_labor=bp_family, opt_solar_drying=bp_solar,
+        opt_biomass_fuel=bp_biomass, opt_automation=bp_auto,
+        opt_batch_schedule=bp_batch,
+        opt_branding=bp_brand, opt_export=bp_export,
+        opt_certification=bp_cert, opt_delivery=bp_deliv,
+        process_method=bp_process, service_radius_km=bp_radius,
+        financing_model=bp_finance, revenue_share_pct=bp_share, n_hubs=bp_hubs,
+    )
+
+    with col2:
+        # Hero metrics
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("💰 Investment", f"฿{r['investment']:,}")
+        with m2:
+            profit_color = "normal" if r['profit'] >= 0 else "inverse"
+            st.metric("📈 Annual Profit", f"฿{r['profit']:,}")
+        with m3:
+            st.metric("🔄 ROI", f"{r['roi']}×/yr")
+        with m4:
+            st.metric("⏱️ Breakeven", f"Mo {r['breakeven_months']}" if r['breakeven_months'] < 999 else "N/A")
+
+        st.divider()
+
+        # Tier-specific image and description
+        _img_dir = os.path.join(os.path.dirname(__file__), 'images')
+        _bp_img_map = {'micro': 'bp_micro.png', 'starter': 'bp_starter.png', 'mid': 'bp_mid.png', 'industrial': 'bp_industrial.png'}
+        _bp_img_path = os.path.join(_img_dir, _bp_img_map[bp_tier])
+        if os.path.exists(_bp_img_path):
+            st.image(_bp_img_path, use_container_width=True)
+
+        # Tier detail descriptions
+        if bp_tier == 'micro':
+            st.markdown("### 🔧 " + ("ไมโครฮับ — ทำเองที่บ้าน" if TH else "Micro Hub — DIY at Home"))
+            dt1, dt2 = st.columns(2)
+            with dt1:
+                st.markdown("""
+**Equipment:**
+- 🔧 Repurposed cement mixer (pulper)
+- 🏭 Car jack hydraulic press + heated plate
+- 🧱 Concrete molds (4 shapes)
+- ☀️ Fan + clear roof drying racks
+- 🪣 Lime water soak tank
+
+**Capacity:** 80 kg straw/day → ~52 kg product
+""")
+            with dt2:
+                st.markdown("""
+**Best for:**
+- 👨‍🌾 Any farmer who wants to START
+- 💰 Lowest entry: **฿50,000** only
+- ⏱️ 4 hrs/day part-time work
+- 🌾 Uses off-season time productively
+
+**Why this works:**
+- ✅ Cement mixer = ฿15K vs ฿60K pulper
+- ✅ Concrete molds = ฿500 vs ฿5,000 CNC
+- ✅ Car jack press = ฿8K vs ฿80K hydraulic
+- ✅ 3-month payback with family labor
+""")
+        elif bp_tier == 'starter':
+            st.markdown("### 🌱 " + ("ระดับเริ่มต้น — โรงเรือนเปิดริมนา" if TH else "Starter — Open-Air Workshop"))
+            dt1, dt2 = st.columns(2)
+            with dt1:
+                st.markdown("""
+**Equipment:**
+- 🔧 Manual hand-crank straw pulper
+- 🏭 Single mold press (1 cavity)
+- ☀️ Bamboo solar drying racks
+- 🪣 Water tank + NaOH bath
+
+**Capacity:** 200 kg straw/day → ~100 kg product
+""")
+            with dt2:
+                st.markdown("""
+**Best for:**
+- 👨‍🌾 Family-run at rice mill
+- 💰 Lowest entry cost (฿200K)
+- 🎓 Learning the process first
+- 📦 Local market supply (restaurants, markets)
+
+**Limitations:**
+- ⚠️ Weather-dependent (sun drying)
+- ⚠️ Slow — manual pressing
+- ⚠️ Less consistent quality
+""")
+
+        elif bp_tier == 'mid':
+            st.markdown("### ⚖️ " + ("ระดับกลาง — โรงงานขนาดเล็ก" if TH else "Mid-Scale — Small Factory"))
+            dt1, dt2 = st.columns(2)
+            with dt1:
+                st.markdown("""
+**Equipment:**
+- 🔧 Semi-auto pulping machine
+- 🏭 4-station mold press (conveyor)
+- 🔥 Gas-fired drying chamber (180°C)
+- ♨️ Hot press finishing station
+- 📊 Basic quality control
+
+**Capacity:** 500 kg straw/day → ~280 kg product
+""")
+            with dt2:
+                st.markdown("""
+**Best for:**
+- 🏢 Co-op or small business
+- 📈 Serious commercial operation
+- 🌧️ All-weather production (indoor drying)
+- 🛒 Supply hotels, restaurants, chains
+
+**Advantages over Starter:**
+- ✅ 2.5× faster production
+- ✅ Consistent quality (controlled drying)
+- ✅ Hot press = waterproof finish
+- ✅ Can run year-round
+""")
+
+        else:  # industrial
+            st.markdown("### 🏭 " + ("ระดับอุตสาหกรรม — โรงงานเต็มรูปแบบ" if TH else "Industrial — Full Factory"))
+            dt1, dt2 = st.columns(2)
+            with dt1:
+                st.markdown("""
+**Equipment:**
+- 🔧 Full auto industrial pulper
+- 🏭 Multi-cavity rotary mold press
+- 🔥 Tunnel dryer with conveyor belt
+- ✂️ Automated trimming & stacking
+- 📊 QC station + lab testing
+- ☀️ Solar panels on roof
+- 🚛 Loading dock
+
+**Capacity:** 2,000 kg straw/day → ~1,200 kg product
+""")
+            with dt2:
+                st.markdown("""
+**Best for:**
+- 🏢 Export-grade operation
+- 🌍 Large-scale: hotels, airlines, supermarkets
+- 🇯🇵 International buyers (Japan, EU)
+- 📜 Certification-ready (FDA, compostable)
+
+**Advantages:**
+- ✅ 10× Starter capacity
+- ✅ 85% yield (vs 70% Starter)
+- ✅ Automated = lower cost per piece
+- ✅ Premium quality for export
+- ✅ Can absorb straw from 100+ farmers
+""")
+
+
+        # ═══════════════════════════════════════
+        # TABS
+        # ═══════════════════════════════════════
+        tab_econ, tab_health, tab_season, tab_cover, tab_hours, tab_platform = st.tabs([
+            "📊 " + ("เศรษฐกิจ" if TH else "Economics"),
+            "🏥 " + ("สุขภาพ" if TH else "Health"),
+            "📅 " + ("ปฏิทิน" if TH else "Calendar"),
+            "🗺️ " + ("พื้นที่" if TH else "Coverage"),
+            "⏱️ " + ("ชั่วโมง" if TH else "Hours"),
+            "💼 " + ("แพลตฟอร์ม" if TH else "Platform"),
+        ])
+
+        # ═══════════ TAB 1: ECONOMICS ═══════════
+        with tab_econ:
+            st.subheader("🔄 " + ("กระบวนการผลิต" if TH else "Production Flow"))
+            prod = r['production']
+            fc1, fc2, fc3, fc4 = st.columns(4)
+            with fc1:
+                st.metric("🌾 Straw In", f"{prod['straw_used']:,} kg/yr")
+                st.caption(f"Capacity: {prod['utilization']}%")
+            with fc2:
+                st.metric("🧪 Pulp", f"{prod['pulp_kg']:,} kg")
+            with fc3:
+                st.metric("📦 Finished", f"{prod['finished_kg']:,} kg")
+            with fc4:
+                total_pieces = sum(p['pieces'] for p in r['products'])
+                st.metric("🍽️ Pieces", f"{total_pieces:,}/yr")
+
+            st.divider()
+            st.subheader("🍽️ " + ("ผลิตภัณฑ์" if TH else "Products"))
+            p1, p2 = st.columns(2)
+            with p1:
+                prod_df = pd.DataFrame([{
+                    "Product": f"{p['emoji']} {p['name_en']}",
+                    "kg/yr": f"{p['kg']:,}", "Pieces": f"{p['pieces']:,}",
+                    "Revenue": f"฿{p['revenue']:,}",
+                } for p in r['products']])
+                st.dataframe(prod_df, use_container_width=True, hide_index=True)
+            with p2:
+                fig_prod = go.Figure(go.Pie(
+                    labels=[f"{p['emoji']} {p['name_en']}" for p in r['products']],
+                    values=[p['revenue'] for p in r['products']], hole=0.4,
+                    marker_colors=['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+                    textinfo='label+percent', textfont_size=12,
+                ))
+                fig_prod.update_layout(height=280, template='plotly_dark',
+                    paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=10, l=10, r=10), showlegend=False)
+                st.plotly_chart(fig_prod, use_container_width=True)
+
+            st.divider()
+            st.subheader("💰 " + ("รายรับ vs ต้นทุน" if TH else "Revenue vs Costs"))
+            rv1, rv2 = st.columns(2)
+            c = r['costs']
+            with rv1:
+                st.metric("📈 Revenue", f"฿{r['revenue']:,}/yr")
+                cost_df = pd.DataFrame([
+                    {"Cost": "🌾 Straw", "฿/yr": f"฿{c['straw']:,}"},
+                    {"Cost": "👷 Labor", "฿/yr": f"฿{c['labor']:,}"},
+                    {"Cost": "⚡ Energy", "฿/yr": f"฿{c['energy']:,}"},
+                    {"Cost": "🧪 Chemicals", "฿/yr": f"฿{c['chemicals']:,}"},
+                    {"Cost": "🔧 Maintenance", "฿/yr": f"฿{c['maintenance']:,}"},
+                    {"Cost": "📦 Packaging", "฿/yr": f"฿{c['packaging']:,}"},
+                    {"Cost": "**TOTAL**", "฿/yr": f"**฿{c['total']:,}**"},
+                ])
+                st.dataframe(cost_df, use_container_width=True, hide_index=True)
+            with rv2:
+                fig_wf = go.Figure(go.Waterfall(
+                    x=["Revenue", "Straw", "Labor", "Energy", "Chem", "Maint", "Pack", "Profit"],
+                    y=[r['revenue'], -c['straw'], -c['labor'], -c['energy'], -c['chemicals'], -c['maintenance'], -c['packaging'], r['profit']],
+                    measure=["absolute", "relative", "relative", "relative", "relative", "relative", "relative", "total"],
+                    connector={"line": {"color": "rgba(255,255,255,0.1)"}},
+                    increasing={"marker": {"color": "#10b981"}}, decreasing={"marker": {"color": "#ef4444"}},
+                    totals={"marker": {"color": "#3b82f6" if r['profit'] >= 0 else "#ef4444"}},
+                    text=[f"฿{abs(v):,}" for v in [r['revenue'], -c['straw'], -c['labor'], -c['energy'], -c['chemicals'], -c['maintenance'], -c['packaging'], r['profit']]],
+                    textposition="outside", textfont=dict(size=10, color='white'),
+                ))
+                fig_wf.update_layout(height=350, template='plotly_dark',
+                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', showlegend=False, margin=dict(t=20, b=10))
+                st.plotly_chart(fig_wf, use_container_width=True)
+
+            # Savings
+            s = r['savings']
+            if s['total'] > 0:
+                st.success(f"💡 **Cost Savings: ฿{s['total']:,}/yr**")
+                sv1, sv2, sv3 = st.columns(3)
+                with sv1:
+                    st.metric("👷 Labor Saved", f"฿{s['labor']:,}/yr",
+                             delta=f"-{round(s['labor']/max(s['base_labor'],1)*100)}%" if s['labor'] > 0 else None)
+                with sv2:
+                    st.metric("⚡ Energy Saved", f"฿{s['energy']:,}/yr",
+                             delta=f"-{round(s['energy']/max(s['base_energy'],1)*100)}%" if s['energy'] > 0 else None)
+                with sv3:
+                    st.metric("📈 Profit Boost", f"+฿{s['total']:,}/yr", delta="Extra profit")
+
+            # Revenue Boosts
+            if r['revenue_boosts']:
+                st.divider()
+                st.subheader("📈 Revenue Boosts")
+                for rb in r['revenue_boosts']:
+                    inv_str = f" (invest ฿{rb['invest']:,})" if rb['invest'] > 0 else ""
+                    st.success(f"{rb['name']}: **+฿{rb['boost']:,}/yr**{inv_str}")
+
+            # Farmer Income
+            st.divider()
+            fi = r['farmer_income']
+            st.subheader("🌾 " + ("รายได้เกษตรกร" if TH else "Farmer Income"))
+            if fi.get('mode') == 'owner':
+                if fi['total'] > 0:
+                    st.metric("Total Income", f"฿{fi['total']:,}/yr", delta=f"฿{fi['monthly']:,}/mo")
+                else:
+                    st.warning("⚠️ Loss — try more rai or cooperative mode.")
+            else:
+                st.metric(f"Each farmer ({r['n_farmers']} total)", f"฿{fi['total']:,}/yr",
+                          delta=f"฿{fi['monthly']:,}/mo from straw sales")
+
+            with st.expander("📊 Compare All Tiers"):
+                tier_df = pd.DataFrame([{
+                    "Tier": ti['name'], "Investment": f"฿{ti['investment']:,}",
+                    "Capacity": ti['capacity'], "Workers": ti['workers'],
+                    "Revenue": f"฿{ti['revenue']:,}", "Profit": f"฿{ti['profit']:,}", "ROI": f"{ti['roi']}×",
+                } for ti in r['all_tiers']])
+                st.dataframe(tier_df, use_container_width=True, hide_index=True)
+
+        # ═══════════ TAB 2: HEALTH ═══════════
+        with tab_health:
+            st.subheader("🏥 " + ("ผลกระทบต่อสุขภาพ" if TH else "Health Impact"))
+            h = r['health']
+            h1, h2, h3, h4 = st.columns(4)
+            with h1:
+                st.metric("🌾 Straw Diverted", f"{h['straw_diverted_tons']} t")
+            with h2:
+                st.metric("🌍 CO₂ Prevented", f"{h['co2_prevented']} t")
+            with h3:
+                st.metric("😷 PM2.5 Prevented", f"{h['pm25_prevented_kg']} kg")
+            with h4:
+                st.metric("👥 People Benefit", f"{h['people_benefit']:,}")
+            h5, h6 = st.columns(2)
+            with h5:
+                st.metric("🏥 Healthcare Saved", f"฿{h['healthcare_savings']:,}/yr", delta="Fewer hospital visits")
+            with h6:
+                st.metric("🌿 Carbon Credits", f"฿{h['carbon_credit']:,}/yr", delta="T-VER eligible")
+            total_soc = r['profit'] + h['healthcare_savings'] + h['carbon_credit']
+            st.success(f"🏆 **Total Societal Value: ฿{total_soc:,}/yr** = Profit ฿{r['profit']:,} + Health ฿{h['healthcare_savings']:,} + Carbon ฿{h['carbon_credit']:,}")
+
+        # ═══════════ TAB 3: CALENDAR ═══════════
+        with tab_season:
+            st.subheader("📅 " + ("ปฏิทินการผลิต" if TH else "Monthly Production Calendar"))
+            st.markdown("> " + ("ผลิตช่วงว่างจากนา — ไม่ขัดกัน!" if TH else "Production fits farming off-season!"))
+            sn = r['seasonal']
+            fig_cal = go.Figure()
+            fig_cal.add_trace(go.Bar(
+                x=[s['month'] for s in sn], y=[s['pieces'] for s in sn],
+                name="📦 Pieces", marker_color=['#10b981' if s['pack_days'] > 10 else '#f59e0b' if s['pack_days'] > 5 else '#ef4444' for s in sn],
+                text=[f"{s['pieces']:,}" for s in sn], textposition='outside', textfont=dict(size=10, color='white'),
+            ))
+            peak_val = max(ss['pieces'] for ss in sn) if sn else 1
+            fig_cal.add_trace(go.Scatter(
+                x=[s['month'] for s in sn], y=[s['farm_busy'] * peak_val for s in sn],
+                name="🌾 Farm Busy", line=dict(color='#ef4444', width=2, dash='dot'),
+            ))
+            fig_cal.update_layout(height=350, template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)', legend=dict(orientation="h", y=-0.15),
+                margin=dict(t=20, b=40), yaxis_title="Pieces/month")
+            st.plotly_chart(fig_cal, use_container_width=True)
+            cal_df = pd.DataFrame([{
+                "Month": s['month'], "🌾 Farm": f"{round(s['farm_busy']*100)}%",
+                "📦 Days": s['pack_days'], "⏱️ Hrs": s['work_hrs'],
+                "🍽️ Pcs": f"{s['pieces']:,}", "☀️": "☀️" * round(s['solar'] * 3),
+            } for s in sn])
+            st.dataframe(cal_df, use_container_width=True, hide_index=True)
+            wh = r['work_hours']
+            tc1, tc2, tc3 = st.columns(3)
+            with tc1:
+                st.metric("📅 Work Days/yr", f"{wh['total_days']}")
+            with tc2:
+                st.metric("⏱️ Total Hrs/yr", f"{wh['total_hrs']}")
+            with tc3:
+                st.metric("🍽️ Pieces/yr", f"{wh['total_pieces']:,}")
+            st.info("💡 **Feb-May is peak** — no farming, great sun. Jun-Jul off (planting).")
+
+        # ═══════════ TAB 4: COVERAGE ═══════════
+        with tab_cover:
+            st.subheader("🗺️ " + ("พื้นที่ & อุปสงค์" if TH else "Coverage & Demand"))
+            cov = r['coverage']
+            cc1, cc2, cc3 = st.columns(3)
+            with cc1:
+                st.metric("📍 Radius", f"{cov['radius_km']} km")
+                st.metric("🌾 Farmland", f"{cov['farmland_rai']:,} rai")
+            with cc2:
+                st.metric("🌾 Straw Available", f"{cov['straw_in_radius']:,} kg")
+                st.metric("🏭 Hub Needs", f"{cov['hub_needs']:,} kg")
+            with cc3:
+                st.metric("📊 Usage", f"{cov['coverage_pct']}%")
+                st.caption("% of area straw used")
+            if cov['coverage_pct'] < 1:
+                st.success(f"🟢 Uses only **{cov['coverage_pct']}%** of straw — room for **{min(9999, round(100/max(cov['coverage_pct'],0.01)))} hubs!**")
+
+            st.divider()
+            st.subheader("🛒 " + ("อุปสงค์" if TH else "Local Demand"))
+            dd1, dd2, dd3 = st.columns(3)
+            with dd1:
+                st.metric("🍜 Restaurants", f"{cov['restaurants']}")
+            with dd2:
+                st.metric("📦 Demand", f"{cov['demand_pieces_mo']:,} pcs/mo")
+            with dd3:
+                st.metric("🏭 Supply", f"{cov['supply_pieces_mo']:,} pcs/mo")
+            met = cov['demand_met_pct']
+            if met < 50:
+                st.info(f"📈 Meet **{met}%** of demand — room to grow!")
+            elif met < 100:
+                st.success(f"✅ Meet **{met}%** of demand — good fit!")
+            else:
+                st.warning("⚠️ Supply > demand — explore export or delivery partners.")
+
+            fig_rad = go.Figure(go.Indicator(
+                mode="gauge+number", value=cov['supply_pieces_mo'],
+                title={'text': "Supply vs Demand (pcs/mo)", 'font': {'size': 14, 'color': 'white'}},
+                gauge={'axis': {'range': [0, max(cov['demand_pieces_mo'], cov['supply_pieces_mo']) * 1.2]},
+                       'bar': {'color': '#10b981'},
+                       'steps': [{'range': [0, cov['demand_pieces_mo']], 'color': 'rgba(239,68,68,0.3)'}],
+                       'threshold': {'line': {'color': '#ef4444', 'width': 3}, 'value': cov['demand_pieces_mo']}},
+                number={'font': {'color': 'white'}},
+            ))
+            fig_rad.update_layout(height=250, template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=40, b=10))
+            st.plotly_chart(fig_rad, use_container_width=True)
+
+        # ═══════════ TAB 5: WORK HOURS ═══════════
+        with tab_hours:
+            st.subheader("⏱️ " + ("ชั่วโมง & รายได้" if TH else "Work Hours & Earnings"))
+            wh = r['work_hours']
+            wm1, wm2, wm3, wm4 = st.columns(4)
+            with wm1:
+                st.metric("⏱️ Hrs/Day", f"{wh['hrs_per_day']}")
+            with wm2:
+                st.metric("📅 Days/Yr", f"{wh['total_days']}")
+            with wm3:
+                st.metric("⏱️ Total", f"{wh['total_hrs']} hrs/yr")
+            with wm4:
+                st.metric("💰 ฿/Hour", f"฿{wh['baht_per_hr']:,}", delta="Net profit/hr")
+
+            st.divider()
+            st.subheader("🔬 " + ("ขั้นตอนต่อวัน" if TH else "Daily Steps"))
+            if bp_process == 'pulp':
+                steps = [("🌾 Cut & soak", "30 min"), ("🧪 NaOH pulp", "2-4 hrs"), ("💧 Wash", "1 hr"),
+                         ("🔄 Mix", "30 min"), ("🏭 Press", "10s/pc"), ("🔥 Dry", "20-30 min")]
+            elif bp_process == 'lime':
+                steps = [("🌾 Chop", "15 min"), ("🍋 Lime soak", "Overnight ⏳"), ("🔄 Mixer", "1 hr"),
+                         ("🥣 Starch mix", "15 min"), ("🏭 Press", "30s/pc"), ("☀️ Fan dry", "2-4 hrs")]
+            else:
+                steps = [("🌾 Shred fine", "30 min"), ("🥣 Starch mix", "15 min"),
+                         ("🏭 Hot press", "30s/pc"), ("☀️ Cool", "15 min")]
+            st.dataframe(pd.DataFrame([{"Step": s[0], "Time": s[1]} for s in steps]),
+                        use_container_width=True, hide_index=True)
+
+            method_info = {'pulp': "Best quality. Standard industry.", 'lime': "80% cheaper chemicals! Lime ฿5 vs NaOH ฿40/kg.",
+                          'direct': "Skip pulping! Fastest (15 min). Rougher finish."}
+            st.info(f"**Method: {r['process_method'].upper()}** — {method_info[bp_process]}")
+
+            st.divider()
+            st.subheader("📊 " + ("เปรียบเทียบรายได้" if TH else "Earnings vs Jobs"))
+            st.dataframe(pd.DataFrame([
+                {"Job": "🌾 Rice Farming", "฿/hr": "฿40-60", "Hrs/yr": "~1,500"},
+                {"Job": "🏭 Factory Worker", "฿/hr": "฿46 (min wage)", "Hrs/yr": "~2,400"},
+                {"Job": "🛵 Grab Driver", "฿/hr": "฿80-120", "Hrs/yr": "~2,000"},
+                {"Job": f"📦 **Bio-Pack ({r['tier']['name']})**", "฿/hr": f"**฿{wh['baht_per_hr']:,}**", "Hrs/yr": f"**{wh['total_hrs']}**"},
+            ]), use_container_width=True, hide_index=True)
+            if wh['baht_per_hr'] > 120:
+                st.success(f"🏆 **฿{wh['baht_per_hr']:,}/hr** — Better than most rural jobs!")
+            elif wh['baht_per_hr'] > 46:
+                st.info(f"👍 ฿{wh['baht_per_hr']:,}/hr — Above minimum wage + flexible.")
+            else:
+                st.warning(f"⚠️ ฿{wh['baht_per_hr']:,}/hr — Enable optimizers to improve.")
+
+        # ═══════════ TAB 6: PLATFORM OWNER ═══════════
+        with tab_platform:
+            pl = r['platform']
+            ph = pl['per_hub']
+            pt = pl['total']
+
+            st.subheader("💼 " + ("รายได้เจ้าของแพลตฟอร์ม" if TH else "Your Income as Platform Owner"))
+            st.info(f"**{pl['description']}** — {pl['n_hubs']} hub{'s' if pl['n_hubs'] > 1 else ''}")
+
+            # Hero metrics
+            pm1, pm2, pm3, pm4 = st.columns(4)
+            with pm1:
+                st.metric("💰 Total Investment", f"฿{pt['invest']:,}")
+            with pm2:
+                st.metric("📈 Your Income/yr", f"฿{pt['income']:,}", delta=f"฿{round(pt['income']/12):,}/mo")
+            with pm3:
+                st.metric("📊 ROI", f"{pt['roi']}×")
+            with pm4:
+                st.metric("⏰ Payback", f"{pt['payback_months']} months")
+
+            st.divider()
+
+            # Per hub and split
+            splt1, splt2 = st.columns(2)
+            with splt1:
+                st.subheader("📦 " + ("ต่อ 1 ฮับ" if TH else "Per Hub"))
+                st.dataframe(pd.DataFrame([
+                    {"Item": "💼 Your Income/hub", "฿/yr": f"฿{ph['owner_income']:,}"},
+                    {"Item": "👨‍🌾 Farmer Income/hub", "฿/yr": f"฿{ph['farmer_income']:,}"},
+                    {"Item": "🏭 Your Investment/hub", "฿": f"฿{ph['owner_invest']:,}"},
+                ]), use_container_width=True, hide_index=True)
+
+                if pl['n_hubs'] > 1:
+                    st.subheader("🏭 " + ("รวมทุกฮับ" if TH else f"Total ({pl['n_hubs']} Hubs)"))
+                    st.dataframe(pd.DataFrame([
+                        {"Item": "💼 Your Total Income", "฿/yr": f"฿{pt['income']:,}"},
+                        {"Item": "👨‍🌾 All Farmers Total", "฿/yr": f"฿{pt['farmer_total']:,}"},
+                        {"Item": "🏭 Total Investment", "฿": f"฿{pt['invest']:,}"},
+                    ]), use_container_width=True, hide_index=True)
+
+            with splt2:
+                # Income split pie
+                st.subheader("🍰 " + ("แบ่งรายได้" if TH else "Income Split"))
+                fig_split = go.Figure(go.Pie(
+                    labels=["💼 You (Platform)", "👨‍🌾 Farmers"],
+                    values=[pt['income'], pt['farmer_total']],
+                    hole=0.4, marker_colors=['#3b82f6', '#10b981'],
+                    textinfo='label+percent', textfont_size=14,
+                ))
+                fig_split.update_layout(height=280, template='plotly_dark',
+                    paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=10, l=10, r=10),
+                    showlegend=False)
+                st.plotly_chart(fig_split, use_container_width=True)
+
+            st.divider()
+
+            # 5-year projection
+            st.subheader("📈 " + ("คาดการณ์ 5 ปี" if TH else "5-Year Projection"))
+            proj = pl['projection']
+            fig_proj = go.Figure()
+            fig_proj.add_trace(go.Bar(
+                x=[f"Year {p['year']}" for p in proj],
+                y=[p['income'] for p in proj],
+                name="💰 Annual Income",
+                marker_color='#3b82f6',
+                text=[f"฿{p['income']:,}" for p in proj],
+                textposition='outside', textfont=dict(size=11, color='white'),
+            ))
+            fig_proj.add_trace(go.Scatter(
+                x=[f"Year {p['year']}" for p in proj],
+                y=[p['cumulative'] for p in proj],
+                name="📈 Cumulative",
+                line=dict(color='#10b981', width=3),
+                text=[f"฿{p['cumulative']:,}" for p in proj],
+                textposition='top center', textfont=dict(size=10, color='#10b981'),
+                mode='lines+markers+text',
+            ))
+            fig_proj.update_layout(height=350, template='plotly_dark',
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                legend=dict(orientation="h", y=-0.15), margin=dict(t=20, b=40),
+                yaxis_title="฿",
+            )
+            # Add break-even line at 0
+            fig_proj.add_hline(y=0, line_dash="dash", line_color="rgba(255,255,255,0.3)")
+            st.plotly_chart(fig_proj, use_container_width=True)
+
+            # Growth roadmap
+            st.subheader("🗺️ " + ("แผนขยาย" if TH else "Growth Roadmap"))
+            invest_per = ph['owner_invest']
+            income_per = ph['owner_income']
+            if income_per > 0:
+                months_to_next = round(invest_per / (income_per / 12))
+                st.markdown(f"""
+| Phase | Action | Hubs | Your Monthly Income |
+|-------|--------|------|-------------------|
+| 🚀 **Start** | Invest ฿{invest_per:,} in Hub 1 | 1 | ฿{round(income_per/12):,}/mo |
+| 📈 **Month {months_to_next}** | Profits fund Hub 2 | 2 | ฿{round(income_per*2/12):,}/mo |
+| 📈 **Month {months_to_next*2}** | Add Hub 3 | 3 | ฿{round(income_per*3/12):,}/mo |
+| 🎯 **Month {months_to_next*4}** | Reinvest → Hub 5 | 5 | ฿{round(income_per*5/12):,}/mo |
+| 🏆 **Year 2-3** | Scale to 10 hubs | 10 | **฿{round(income_per*10/12):,}/mo** 🚀 |
+""")
+            st.success(f"🏆 **At {pl['n_hubs']} hubs: You earn ฿{round(pt['income']/12):,}/mo, farmers earn ฿{round(pt['farmer_total']/12):,}/mo. Everyone wins!**")
+
+
+
