@@ -4704,3 +4704,135 @@ def compute_labor_allocation(
             'cost_per_kg': round(total_labor_cost / (n_bags * 2.5 * 0.25 * cycles_per_year), 2) if n_bags > 0 else 0,
         },
     }
+
+
+# ── LAB 47: HUB-AT-MILL COMPARISON ──
+def compute_hub_at_mill(
+    tier: str = 'balanced',
+    n_farmers: int = 30,
+    rai_per_farmer: float = 15,
+    straw_per_rai: float = 650,
+    straw_buy_price: float = 3,
+    mushroom_price: float = 60,
+    dried_price: float = 400,
+    pct_dried: float = 30,
+    pct_powder: float = 10,
+    cycles_per_year: int = 5,
+    hired_workers: int = 1,
+    daily_wage: float = 370,
+) -> Dict:
+    """Hub-at-Mill 3-tier comparison: Lean MVP, Balanced, Full Build.
+    Models centralized mushroom production at rice mill."""
+
+    tiers = {
+        'lean': {
+            'name': '🌱 Lean MVP', 'investment': 50500,
+            'bags_per_cycle': 500, 'be_pct': 22, 'contamination_pct': 12,
+            'blended_multiplier': 1.3, 'hired': 0, 'family_workers': 2,
+            'has_dryer': True, 'has_spawn_lab': False, 'has_solar': False,
+            'polyhouse': 'Mill shed + plastic', 'shelving': 'Bamboo DIY',
+            'dryer': 'DIY bamboo+plastic', 'misting': 'Manual spray',
+        },
+        'balanced': {
+            'name': '⚖️ Balanced', 'investment': 250000,
+            'bags_per_cycle': 2000, 'be_pct': 25, 'contamination_pct': 8,
+            'blended_multiplier': 1.6, 'hired': 1, 'family_workers': 1,
+            'has_dryer': True, 'has_spawn_lab': False, 'has_solar': False,
+            'polyhouse': 'Bamboo frame 80m²', 'shelving': 'Bamboo+steel hybrid',
+            'dryer': 'Semi-pro metal+fan', 'misting': 'Drip irrigation',
+        },
+        'full': {
+            'name': '🏭 Full Build', 'investment': 751600,
+            'bags_per_cycle': 5000, 'be_pct': 25, 'contamination_pct': 5,
+            'blended_multiplier': 2.0, 'hired': 2, 'family_workers': 0,
+            'has_dryer': True, 'has_spawn_lab': True, 'has_solar': True,
+            'polyhouse': 'Steel 200m²', 'shelving': 'Full metal 6-tier',
+            'dryer': 'Commercial 100kg/day', 'misting': 'Auto-mist + sensors',
+        },
+    }
+
+    t = tiers[tier]
+    total_straw = n_farmers * rai_per_farmer * straw_per_rai
+
+    # Production
+    bags_year = t['bags_per_cycle'] * cycles_per_year
+    substrate_kg = bags_year * 2.5
+    mushroom_kg = substrate_kg * (t['be_pct'] / 100) * (1 - t['contamination_pct'] / 100)
+
+    # Revenue split — use blended multiplier for fresh (market mix premium)
+    fresh_pct = (100 - pct_dried - pct_powder) / 100
+    fresh_kg = mushroom_kg * fresh_pct
+    dried_kg = mushroom_kg * (pct_dried / 100) / 10  # 10:1 drying ratio
+    powder_kg = mushroom_kg * (pct_powder / 100) / 10
+
+    blended_fresh_price = mushroom_price * t['blended_multiplier']
+    rev_fresh = fresh_kg * blended_fresh_price
+    rev_dried = dried_kg * dried_price
+    rev_powder = powder_kg * 600
+    total_revenue = rev_fresh + rev_dried + rev_powder
+
+    # Costs — hub gets bulk discounts
+    straw_needed_kg = substrate_kg * 0.7  # straw is ~70% of substrate (rest is water, lime)
+    straw_cost = straw_needed_kg * straw_buy_price
+    spawn_per_bag = 3 if t['has_spawn_lab'] else 8  # bulk discount at hub scale vs ฿15 retail
+    spawn_cost = bags_year * spawn_per_bag
+    labor_cost = t['hired'] * daily_wage * 300
+    supplies_cost = bags_year * 1.5  # bags, rubber bands
+    electricity = 0 if t['has_solar'] else bags_year * 0.3
+    total_costs = straw_cost + spawn_cost + labor_cost + supplies_cost + electricity
+
+    profit = total_revenue - total_costs
+    roi = profit / t['investment'] if t['investment'] > 0 else 0
+    breakeven_months = round(t['investment'] / (profit / 12)) if profit > 0 else 999
+
+    # Farmer income (straw payment)
+    straw_used = min(substrate_kg, total_straw)
+    farmer_straw_income = (straw_used * straw_buy_price) / n_farmers
+
+    # Compare all tiers
+    all_tiers = []
+    for key, ti in tiers.items():
+        by = ti['bags_per_cycle'] * cycles_per_year
+        sk = by * 2.5
+        mk = sk * (ti['be_pct'] / 100) * (1 - ti['contamination_pct'] / 100)
+        fk = mk * 0.6; dk = mk * 0.3 / 10; pk = mk * 0.1 / 10
+        bfp = mushroom_price * ti['blended_multiplier']
+        rev = fk * bfp + dk * dried_price + pk * 600
+        sc = sk * 0.7 * straw_buy_price
+        spc = by * (3 if ti['has_spawn_lab'] else 8)
+        lc = ti['hired'] * daily_wage * 300
+        sup = by * 1.5; el = 0 if ti['has_solar'] else by * 0.3
+        tc = sc + spc + lc + sup + el
+        pr = rev - tc
+        all_tiers.append({
+            'key': key, 'name': ti['name'],
+            'investment': ti['investment'],
+            'revenue': round(rev), 'costs': round(tc),
+            'profit': round(pr),
+            'roi': round(pr / ti['investment'], 1) if ti['investment'] > 0 else 0,
+            'breakeven': round(ti['investment'] / (pr / 12)) if pr > 0 else 999,
+            'bags_year': by, 'mushroom_kg': round(mk),
+        })
+
+    return {
+        'tier': t,
+        'production': {
+            'bags_year': bags_year, 'mushroom_kg': round(mushroom_kg),
+            'fresh_kg': round(fresh_kg), 'dried_kg': round(dried_kg), 'powder_kg': round(powder_kg),
+        },
+        'revenue': {
+            'fresh': round(rev_fresh), 'dried': round(rev_dried), 'powder': round(rev_powder),
+            'total': round(total_revenue),
+        },
+        'costs': {
+            'straw': round(straw_cost), 'spawn': round(spawn_cost),
+            'labor': round(labor_cost), 'supplies': round(supplies_cost),
+            'electricity': round(electricity), 'total': round(total_costs),
+        },
+        'profit': round(profit),
+        'roi': round(roi, 1),
+        'breakeven_months': breakeven_months,
+        'farmer_straw_income': round(farmer_straw_income),
+        'all_tiers': all_tiers,
+        'n_farmers': n_farmers,
+    }

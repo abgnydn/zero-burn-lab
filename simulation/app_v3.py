@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
 import pandas as pd
+import os
 from engines_v3 import (
     compute_reynolds, compute_dean_number, compute_critical_reynolds_helical,
     compute_nusselt_helical, compute_overall_u, compute_pressure_drop_helical,
@@ -32,6 +33,7 @@ from engines_v3 import (
     compute_ecommerce_channels, compute_solar_energy, compute_beta_glucan,
     compute_pilot_roadmap,
     compute_water_management, compute_climate_resilience, compute_labor_allocation,
+    compute_hub_at_mill,
     DEFAULT_TUBE_ID, DEFAULT_TUBE_OD, DEFAULT_COIL_DIAM,
 )
 from references import render_references
@@ -120,11 +122,13 @@ lab = st.sidebar.radio("Select Lab:", [
     "💧 Water & Humidity",
     "🌡️ Climate Resilience",
     "👷 Labor Allocation",
+    "─── Hub Model ───",
+    "🏭 Hub-at-Mill",
 ], index=0)
 
 st.sidebar.divider()
-st.sidebar.caption("v4.0 — 11 Rounds + Pilot Program")
-st.sidebar.caption("46 Labs • 80+ References • Thai/English")
+st.sidebar.caption("v4.1 — 11 Rounds + Hub Model")
+st.sidebar.caption("47 Labs • 80+ References • Thai/English")
 
 
 # ================================================================
@@ -3316,3 +3320,145 @@ elif lab == "👷 Labor Allocation":
                 st.markdown(f"- **{t['name']}**: {t['annual_hours']}h/yr ({t['skill']} skill) — {t['when']}")
 
     render_references("👷 Labor Allocation")
+
+
+elif lab == "🏭 Hub-at-Mill":
+    st.title("🏭 " + ("ศูนย์กลางที่โรงสี" if TH else "Hub-at-Mill Comparison Lab"))
+    st.markdown("*" + ("3 ระดับการลงทุน: เริ่มต้น ฿50K → สมดุล ฿250K → เต็มรูปแบบ ฿751K" if TH else "Centralized mushroom hub at rice mill — 3 investment tiers compared.") + "*")
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.subheader("⚙️")
+        tier = st.radio("Investment Tier", ['lean', 'balanced', 'full'],
+                       format_func=lambda x: {'lean': '🌱 Lean MVP (฿50K)', 'balanced': '⚖️ Balanced (฿250K)', 'full': '🏭 Full (฿751K)'}[x], key="ham_t")
+        farmers = st.slider("Farmers in radius", 10, 50, 30, key="ham_f")
+        straw_price = st.slider("Pay per kg straw (฿)", 1, 5, 3, key="ham_sp")
+        pct_dried = st.slider("% dried products", 10, 60, 30, key="ham_pd")
+
+    r = compute_hub_at_mill(tier=tier, n_farmers=farmers, straw_buy_price=straw_price, pct_dried=pct_dried)
+
+    with col2:
+        # Hero metrics
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("💰 Investment", f"฿{r['tier']['investment']:,}")
+        with m2:
+            st.metric("📈 Annual Profit", f"฿{r['profit']:,}")
+        with m3:
+            st.metric("🔄 ROI", f"{r['roi']}×/yr")
+        with m4:
+            st.metric("⏱️ Breakeven", f"Month {r['breakeven_months']}")
+
+        st.divider()
+
+        # Show the image for selected tier
+        _img_dir = _os.path.join(_os.path.dirname(__file__), 'images')
+        _img_map = {'lean': 'lean_mvp.png', 'balanced': 'balanced_hub.png', 'full': 'full_hub.png'}
+        _img_path = _os.path.join(_img_dir, _img_map[tier])
+        if _os.path.exists(_img_path):
+            st.image(_img_path, use_container_width=True)
+
+        st.divider()
+
+        # Tier comparison chart
+        st.subheader("📊 " + ("เปรียบเทียบ 3 ระดับ" if TH else "All 3 Tiers Compared"))
+        tiers_data = r['all_tiers']
+
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=[t['name'] for t in tiers_data],
+            y=[t['investment'] for t in tiers_data],
+            name='💰 Investment',
+            marker_color='#ef4444',
+            text=[f"฿{t['investment']:,}" for t in tiers_data],
+            textposition='outside',
+        ))
+        fig.add_trace(go.Bar(
+            x=[t['name'] for t in tiers_data],
+            y=[t['profit'] for t in tiers_data],
+            name='📈 Annual Profit',
+            marker_color='#10b981',
+            text=[f"฿{t['profit']:,}" for t in tiers_data],
+            textposition='outside',
+        ))
+        fig.update_layout(
+            height=400, template='plotly_dark', barmode='group',
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+            yaxis_title='฿ Thai Baht',
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Details
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("### 🍄 " + ("ผลผลิต" if TH else "Production"))
+            p = r['production']
+            st.markdown(f"""
+| Metric | Value |
+|--------|-------|
+| Bags/year | {p['bags_year']:,} |
+| Fresh mushroom | {p['fresh_kg']:,} kg |
+| Dried | {p['dried_kg']:,} kg |
+| Powder | {p['powder_kg']:,} kg |
+            """)
+
+            st.markdown("### 💰 " + ("รายได้" if TH else "Revenue"))
+            rev = r['revenue']
+            st.markdown(f"""
+| Source | Annual |
+|--------|--------|
+| 🍄 Fresh | ฿{rev['fresh']:,} |
+| 🌿 Dried | ฿{rev['dried']:,} |
+| 💊 Powder | ฿{rev['powder']:,} |
+| **Total** | **฿{rev['total']:,}** |
+            """)
+
+        with c2:
+            st.markdown("### 📋 " + ("ค่าใช้จ่าย" if TH else "Operating Costs"))
+            c = r['costs']
+            st.markdown(f"""
+| Item | Annual |
+|------|--------|
+| 🌾 Straw purchase | ฿{c['straw']:,} |
+| 🧫 Spawn | ฿{c['spawn']:,} |
+| 👷 Labor | ฿{c['labor']:,} |
+| 📦 Supplies | ฿{c['supplies']:,} |
+| ⚡ Electricity | ฿{c['electricity']:,} |
+| **Total** | **฿{c['total']:,}** |
+            """)
+
+            st.markdown("### 🌾 " + ("รายได้เกษตรกร" if TH else "Farmer Income"))
+            st.metric(f"Per farmer ({farmers} farmers)", f"฿{r['farmer_straw_income']:,}/yr",
+                     delta="Passive — just sell straw")
+            st.caption("On top of rice income. Zero training needed.")
+
+        st.divider()
+
+        # Tier comparison table
+        st.subheader("📋 " + ("ตารางเปรียบเทียบ" if TH else "Side-by-Side Comparison"))
+        st.markdown(f"""
+| Metric | 🌱 Lean | ⚖️ Balanced | 🏭 Full |
+|--------|---------|-------------|---------|
+| Investment | ฿{tiers_data[0]['investment']:,} | ฿{tiers_data[1]['investment']:,} | ฿{tiers_data[2]['investment']:,} |
+| Bags/year | {tiers_data[0]['bags_year']:,} | {tiers_data[1]['bags_year']:,} | {tiers_data[2]['bags_year']:,} |
+| Mushroom | {tiers_data[0]['mushroom_kg']:,} kg | {tiers_data[1]['mushroom_kg']:,} kg | {tiers_data[2]['mushroom_kg']:,} kg |
+| Revenue | ฿{tiers_data[0]['revenue']:,} | ฿{tiers_data[1]['revenue']:,} | ฿{tiers_data[2]['revenue']:,} |
+| Profit | ฿{tiers_data[0]['profit']:,} | ฿{tiers_data[1]['profit']:,} | ฿{tiers_data[2]['profit']:,} |
+| **ROI** | **{tiers_data[0]['roi']}×** | **{tiers_data[1]['roi']}×** | **{tiers_data[2]['roi']}×** |
+| Breakeven | Mo {tiers_data[0]['breakeven']} | Mo {tiers_data[1]['breakeven']} | Mo {tiers_data[2]['breakeven']} |
+        """)
+
+        with st.expander("🚀 Recommended Scaling Path"):
+            st.markdown("""
+| Month | Action | Cumulative Cost |
+|-------|--------|----------------|
+| 0 | Start with **Lean MVP** (฿50K) | ฿50,500 |
+| 3 | First revenue — proof of concept ✅ | ฿50,500 |
+| 6 | Upgrade to **Balanced** from profits | ~฿250,000 |
+| 12 | Full operation at 2,000 bags/cycle | ฿250,000 |
+| 18 | Add spawn lab (฿15K from profits) | ฿265,000 |
+| 24 | Add solar panels if profitable | ฿425,000 |
+| 36 | Consider **2nd hub** at next mill | — |
+            """)
+
+    render_references("🏭 Hub-at-Mill")

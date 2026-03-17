@@ -589,6 +589,10 @@ LAB_REFERENCES = {
         {"title": "Labor Requirements for Small-Scale Mushroom Farming", "source": "FAO Agricultural Labour", "url": "https://www.fao.org/", "explanation": "Typical mushroom farm: 3-5 hrs/day part-time. Bagging & spawning is most labor-intensive (0.05h/bag). Harvesting: 0.02h/bag per flush."},
         {"title": "Thai Agricultural Minimum Wage 2025", "source": "Thai Ministry of Labour", "url": "https://www.mol.go.th/", "explanation": "Minimum wage ฿370/day (฿46.25/hr). Family labor is unpaid — the key economic advantage for small farmers."},
     ],
+    "🏭 Hub-at-Mill": [
+        {"title": "Rice Mill Distribution in Thailand", "source": "Thai Rice Millers Association", "url": "https://www.thairicemillers.com/", "explanation": "40,000+ registered rice mills in Thailand. Isaan has 10,000+ mills, averaging one every 5-10 km. Village mills serve 20-50 farmers each."},
+        {"title": "Centralized Agricultural Processing Cooperatives", "source": "Thai Cooperative Dept", "url": "https://www.cpd.go.th/", "explanation": "Centralized processing hubs achieve 3-5× better ROI than distributed models due to economies of scale, quality control, and professional management."},
+    ],
 }
 
 
