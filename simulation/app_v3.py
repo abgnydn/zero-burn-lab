@@ -142,28 +142,50 @@ st.sidebar.caption("47 Labs • 80+ References • Thai/English")
 # JOURNEY SUMMARY (Landing Page)
 # ================================================================
 if lab == "📊 Journey Summary":
-    st.title("📊 Zero-Burn Blueprint — " + ("สรุปเส้นทาง" if TH else "Journey Summary"))
-    st.markdown("*" + ("จากการเผาฟางสู่รายได้ ฿381K/ปี — 11 รอบวิจัย, 46 แล็บ" if TH else "From burning straw to ฿381K/yr. 11 rounds. 46 labs. Realistic pilot roadmap.") + "*")
+    # ─── Animated Hero Banner ───
+    st.markdown("""
+    <style>
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .hero-title { animation: fadeIn 0.8s ease-out; }
+    .hero-subtitle { animation: fadeIn 1.2s ease-out; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="hero-title">', unsafe_allow_html=True)
+    st.title("🌾 Zero-Burn Blueprint — " + ("สรุปเส้นทาง v4.1" if TH else "Journey Summary v4.1"))
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-subtitle">', unsafe_allow_html=True)
+    st.markdown("*" + ("จากการเผาฟางสู่ศูนย์กลางเห็ดที่โรงสี — 11 รอบวิจัย, 47 แล็บ" if TH else "From burning straw to a mushroom hub at the rice mill — 11 rounds, 47 labs, Hub-at-Mill model.") + "*")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ─── Hero Image ───
+    _hero_img = os.path.join(os.path.dirname(__file__), 'images', 'optimal_setup.png')
+    if os.path.exists(_hero_img):
+        st.image(_hero_img, use_container_width=True, caption="The Complete Zero-Burn Mushroom Operation")
 
     # ─── Hero Metrics ───
     h1, h2, h3, h4 = st.columns(4)
     with h1:
         st.metric("🔥 " + ("วันที่ 1" if TH else "Day 1"), "฿50,000/" + ("ปี" if TH else "yr"))
     with h2:
-        st.metric("🚀 " + ("เดือนที่ 36" if TH else "Month 36 Pilot"), "฿381,000/" + ("ปี" if TH else "yr"), delta="7.6×")
+        st.metric("🏭 " + ("ศูนย์ Hub" if TH else "Hub Model"), "฿870K/" + ("ปี" if TH else "yr"), delta="1.2× ROI")
     with h3:
         st.metric("🧪 " + ("รอบวิจัย" if TH else "Rounds"), "11")
     with h4:
-        st.metric("🔬 " + ("แล็บ" if TH else "Labs"), "46")
+        st.metric("🔬 " + ("แล็บ" if TH else "Labs"), "47")
 
     st.divider()
 
     # ─── Income Progression Chart ───
-    st.subheader("📈 Income Journey — From ฿50K to ฿232K+")
+    st.subheader("📈 " + ("เส้นทางรายได้ — 11 รอบ + Hub Model" if TH else "Income Journey — 11 Rounds + Hub Model"))
 
-    stages = ['🔥 Day 1<br>(Burn Straw)', '🍄 Round 1-5<br>(Basic Plan)', '🛡️ Round 6-7<br>(Validated)', '🧬 Round 8<br>(Breakthrough)', '🛸 Round 9<br>(Final)']
-    incomes = [50000, 97000, 97000, 197000, 232000]
-    colors = ['#ef4444', '#f59e0b', '#f59e0b', '#10b981', '#3b82f6']
+    stages = [
+        '🔥 Day 1<br>(Burn)', '🍄 R1-5<br>(Basic)', '🛡️ R6-7<br>(Validated)',
+        '🧬 R8<br>(Breakthrough)', '🛸 R9<br>(Drones)', '💎 R10<br>(Value-Added)',
+        '🌍 R11<br>(Resilience)', '🚀 Pilot<br>(36 mo)', '🏭 Hub<br>(Full)'
+    ]
+    incomes = [50000, 97000, 97000, 197000, 232000, 310000, 340000, 381000, 870000]
+    colors = ['#ef4444', '#f59e0b', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899']
 
     fig = go.Figure()
     fig.add_trace(go.Bar(
@@ -171,15 +193,15 @@ if lab == "📊 Journey Summary":
         marker_color=colors,
         text=[f'฿{v:,.0f}' for v in incomes],
         textposition='outside',
-        textfont=dict(size=16, color='white'),
+        textfont=dict(size=14, color='white'),
     ))
     fig.update_layout(
-        height=400,
+        height=420,
         template='plotly_dark',
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         yaxis_title='Annual Income (฿)',
-        yaxis=dict(range=[0, 280000]),
+        yaxis=dict(range=[0, 1000000]),
         showlegend=False,
         margin=dict(t=20),
     )
@@ -191,76 +213,80 @@ if lab == "📊 Journey Summary":
     col_left, col_right = st.columns(2)
 
     with col_left:
-        st.subheader("⚖️ Before vs After (per farmer, 15 rai)")
+        st.subheader("⚖️ " + ("ก่อน vs หลัง" if TH else "Before vs After"))
         st.markdown("""
-| Metric | 🔥 Burning | 🛸 Zero-Burn |
+| Metric | 🔥 Burning | 🏭 Hub Model |
 |--------|-----------|-------------|
 | Rice income | ฿150,000 | ฿150,000 |
 | Rice costs | -฿100,000 | -฿100,000 |
-| Mushroom income | ฿0 | **฿147,000+** |
-| Drone spray savings | — | +฿24,885 |
+| Hub profit share | ฿0 | **฿870,000+** |
+| Straw income | ฿0 (burned) | +฿29,250 |
 | Health savings | ฿0 | +฿9,111 |
-| Circular economy | — | +฿8,500 |
-| Equipment cost | ฿0 | -฿500 |
-| Pasteurization | — | -฿6,815 |
+| Training needed | — | **None** |
 | | | |
-| **NET INCOME** | **฿50,000** | **฿232,000+** |
-| **Monthly** | **฿4,200** | **฿19,350** |
+| **NET** | **฿50,000** | **฿870,000+** |
         """)
 
     with col_right:
-        st.subheader("🏆 Top 5 Discoveries")
+        st.subheader("🏆 " + ("5 ข้อค้นพบสำคัญ" if TH else "Top 5 Discoveries"))
         st.markdown("""
 | # | Discovery | Impact |
 |---|-----------|--------|
-| 1 | 🍄 **Oyster mushroom** (BE 95%) | +฿93K/yr |
-| 2 | 🧪 **Lime cold pasteurization** | +฿28K/yr |
-| 3 | 🛸 **Drone spraying** (-40% chems) | +฿25K/yr |
-| 4 | 🏠 **Polyhouse** (5 cycles/yr) | +฿22K/yr |
-| 5 | 🤝 **10-farmer cooperative** | +฿20K/yr |
+| 1 | 🏭 **Hub-at-Mill** model | +฿870K/yr |
+| 2 | 🍄 **Oyster mushroom** (BE 95%) | Best species |
+| 3 | 🧪 **Lime cold pasteurization** | ฿0 fuel cost |
+| 4 | 🛸 **Drone spraying** (-40% chems) | +฿25K/yr |
+| 5 | ☀️ **Solar drying** (10× price) | +฿340K/yr |
         """)
 
-        st.subheader("💚 Environmental Impact")
+        st.subheader("💚 " + ("ผลกระทบสิ่งแวดล้อม" if TH else "Environmental Impact"))
         e1, e2 = st.columns(2)
         with e1:
             st.metric("PM2.5 Eliminated", "76.5 kg/yr", delta="-100%")
             st.metric("Chemical Reduction", "40%", delta="Drone precision")
         with e2:
             st.metric("Healthcare Savings", "฿9,111/yr", delta="-95% hospital visits")
-            st.metric("Life Expectancy", "+2 years", delta="vs burning exposure")
+            st.metric("Zero Farmer Training", "✅", delta="Hub does everything")
 
     st.divider()
 
-    # ─── Optimized Setup ───
-    st.subheader("🏗️ The Optimized Setup")
-    setup_cols = st.columns(5)
-    steps = [
-        ("🌾", "Harvest", "Collect straw (don't burn)"),
-        ("🛸", "Drone Spray", "Lime solution, 12-24h soak"),
-        ("🍄", "Cultivate", "Oyster mushroom, BE 95%"),
-        ("♻️", "Recycle", "SMS → vermicompost"),
-        ("💰", "Profit", "฿232K+/yr per farmer"),
-    ]
-    for col, (icon, title, desc) in zip(setup_cols, steps):
-        with col:
-            st.markdown(f"### {icon}")
-            st.markdown(f"**{title}**")
-            st.caption(desc)
+    # ─── 3 Tier Summary ───
+    st.subheader("🏭 " + ("3 ระดับศูนย์กลาง" if TH else "Hub-at-Mill: 3 Investment Tiers"))
+    t1, t2, t3 = st.columns(3)
+    with t1:
+        st.markdown("### 🌱 Lean MVP")
+        st.metric("Investment", "฿50,500")
+        st.metric("Profit", "฿41K/yr", delta="0.8× ROI")
+        st.caption("Mill shed + bamboo + DIY dryer. Family runs it.")
+    with t2:
+        st.markdown("### ⚖️ Balanced")
+        st.metric("Investment", "฿250,000")
+        st.metric("Profit", "฿173K/yr", delta="0.7× ROI")
+        st.caption("Bamboo polyhouse + 1 worker + semi-pro dryer.")
+    with t3:
+        st.markdown("### 🏭 Full Build")
+        st.metric("Investment", "฿751,600")
+        st.metric("Profit", "฿870K/yr", delta="1.2× ROI")
+        st.caption("Steel polyhouse + solar + spawn lab + 2 workers.")
 
     st.divider()
 
     # ─── Lab Inventory ───
-    st.subheader("🧪 All 36 Labs Across 9 Rounds")
+    st.subheader("🧪 " + ("ทั้งหมด 47 แล็บ ใน 11 รอบ + Hub Model" if TH else "All 47 Labs Across 11 Rounds + Hub Model"))
     rounds_data = {
         "Round 1: Physics": ["Boiler Engineering", "Heat Transfer", "Sterilization", "Growth Kinetics", "Substrate", "Seasonal", "Competitive Analysis", "Monte Carlo"],
         "Round 2: Biology": ["Spawn Rate", "Moisture & Soaking", "Indoor vs Outdoor", "Harvest Labor"],
         "Round 3: Environment": ["Straw Degradation", "Temperature Corridor"],
-        "Round 4: Economics": ["Cooperative Model", "Market Absorption", "Year-Round Planner"],
+        "Round 4: Economics": ["Cooperative", "Market Absorption", "Year-Round Planner"],
         "Round 5: Technology": ["Carbon Credits (T-VER)", "IoT & MRV", "Tractor Ops", "Autonomous Tractor"],
         "Round 6: Risk": ["Contamination Stress", "Market Saturation", "Rice Variety", "Adoption S-Curve", "Sensitivity Tornado"],
         "Round 7: Health": ["PM2.5 Emissions", "Healthcare Cost", "Regional Pollution"],
         "Round 8: Breakthrough": ["Multi-Species", "Circular Economy", "Biochar", "Enzymatic Pre-treatment", "Mycelium Materials"],
         "Round 9: Drones": ["Drone Operations & ROI", "Cold Pasteurization"],
+        "Round 10: Value-Added": ["Solar Drying", "Vertical Multi-Tier", "Spawn Production", "E-Commerce", "Solar Energy", "Beta-Glucan"],
+        "Round 11: Resilience": ["Water & Humidity", "Climate Resilience", "Labor Allocation"],
+        "🚀 Pilot Program": ["Pilot Roadmap (36-month)"],
+        "🏭 Hub Model": ["Hub-at-Mill (3-tier)"],
     }
 
     r_cols = st.columns(3)
@@ -271,7 +297,8 @@ if lab == "📊 Journey Summary":
                 st.caption(f"• {l}")
 
     st.divider()
-    st.info("👈 **Select any lab from the sidebar** to explore the interactive simulation. Every lab has adjustable parameters and verified scientific references.")
+    st.info("👈 **" + ("เลือกแล็บจากแถบด้านข้าง" if TH else "Select any lab from the sidebar") + "** " + ("เพื่อสำรวจ simulation แบบอินเตอร์แอคทีฟ" if TH else "to explore the interactive simulation. Every lab has adjustable parameters and verified scientific references.") + "")
+
 
 
 # ================================================================
