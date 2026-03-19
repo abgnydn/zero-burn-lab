@@ -72,6 +72,7 @@ st.sidebar.divider()
 st.sidebar.markdown("### Select a Lab")
 lab = st.sidebar.radio("Select Lab:", [
     "📊 Journey Summary",
+    "🤝 Investor Data Room",
     "─── Round 1: Physics ───",
     "🔬 Advanced Heat Transfer",
     "🦠 Sterilization Science",
@@ -301,6 +302,65 @@ if lab == "📊 Journey Summary":
     st.info("👈 **" + ("เลือกแล็บจากแถบด้านข้าง" if TH else "Select any lab from the sidebar") + "** " + ("เพื่อสำรวจ simulation แบบอินเตอร์แอคทีฟ" if TH else "to explore the interactive simulation. Every lab has adjustable parameters and verified scientific references.") + "")
 
 
+
+# ================================================================
+# INVESTOR DATA ROOM
+# ================================================================
+elif lab == "🤝 Investor Data Room":
+    st.title("🤝 Platform Investor Data Room")
+    st.markdown("*Interactive sandbox for modeling ZeroBurn platform economics, equity returns, and scale.*")
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.subheader("Angel Round Parameters")
+        investment = st.slider("Your Investment (฿)", 500000, 5000000, 1000000, 100000)
+        equity_pct = st.slider("Equity Stake (%)", 5, 30, 15, 1)
+        
+        st.divider()
+        st.subheader("Platform Metrics")
+        plat_margin = st.slider("Platform Net Margin / Plate (฿)", 0.30, 1.00, 0.60, 0.05)
+        hubs_y5 = st.slider("Hubs Reached by Year 5", 10, 200, 50, 5)
+        plates_per_hub = st.slider("Avg Monthly Plates per Hub", 20000, 200000, 80000, 10000)
+        exit_multiple = st.slider("Exit Valuation Multiple (x Revenue)", 2.0, 10.0, 4.0, 0.5)
+
+    with col2:
+        # Calculate scaling curve (S-Curve approximation)
+        years = [1, 2, 3, 4, 5]
+        hubs_active = [max(1, int(hubs_y5 * 0.1)), int(hubs_y5 * 0.3), int(hubs_y5 * 0.6), int(hubs_y5 * 0.85), hubs_y5]
+        
+        annual_revenue = [h * plates_per_hub * 12 * 3.00 for h in hubs_active] # Revenue is total plate GMV x 3.00
+        net_profit = [h * plates_per_hub * 12 * plat_margin for h in hubs_active]
+        investor_share = [n * (equity_pct / 100) for n in net_profit]
+        
+        y5_revenue = annual_revenue[-1]
+        y5_valuation = y5_revenue * exit_multiple
+        investor_exit_value = y5_valuation * (equity_pct / 100)
+        roi_multiple = investor_exit_value / investment
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.metric("Y5 Active Hubs", f"{hubs_y5}")
+        k2.metric("Y5 Platform Profit", f"฿{net_profit[-1]:,.0f}")
+        k3.metric("Projected Valuation", f"฿{y5_valuation:,.0f}")
+        k4.metric("Your Exit Value", f"฿{investor_exit_value:,.0f}", delta=f"{roi_multiple:.1f}x ROI")
+
+        # Visualizations
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=[f"Year {y}" for y in years], y=net_profit, name='Platform Net Profit (฿)', marker_color='#10b981'))
+        fig.add_trace(go.Bar(x=[f"Year {y}" for y in years], y=investor_share, name='Your Equity Share (฿)', marker_color='#3b82f6'))
+        
+        fig.update_layout(
+            title="5-Year Profitability Projection",
+            barmode='group',
+            yaxis_title="Baht (฿)",
+            template='plotly_dark',
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            height=350,
+            margin=dict(t=30, b=0)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        st.info(f"💡 **At a {exit_multiple}x revenue multiple**, the platform would be valued at **฿{y5_valuation:,.0f}** in Year 5. Your {equity_pct}% stake turns your initial ฿{investment:,.0f} investment into **฿{investor_exit_value:,.0f}**.")
 
 # ================================================================
 # LAB 1: ADVANCED HEAT TRANSFER (ROUND 1)
@@ -3789,45 +3849,46 @@ elif lab == "📦 Bio-Packaging Hub":
         bp_tier = st.radio("Equipment Tier", ['micro', 'starter', 'mid', 'industrial'],
                           format_func=lambda x: {'micro': '🔧 Micro (฿50K)', 'starter': '🌱 Starter (฿200K)', 'mid': '⚖️ Mid (฿500K)', 'industrial': '🏭 Industrial (฿1.5M)'}[x], key="bp_t")
 
-        st.divider()
-        bp_process = st.radio("🧪 " + ("วิธีการผลิต" if TH else "Process Method"),
-                             ['pulp', 'lime', 'direct'],
-                             format_func=lambda x: {'pulp': '🧪 NaOH Pulp', 'lime': '🍋 Lime Water (cheap)', 'direct': '🌾 Direct Press (fastest)'}[x], key="bp_pm")
 
         st.divider()
-        if bp_tier in ('micro', 'starter'):
-            bp_owner = st.toggle("👨‍🌾 " + ("เจ้าของ = เกษตรกร" if TH else "Owner IS the farmer"), value=False, key="bp_om")
+        st.markdown("#### ⏱️ " + ("ตารางงาน" if TH else "Work Schedule"))
+        bp_hours = st.slider("⏱️ " + ("ชม./วัน" if TH else "Hours/Day"), 2, 12, 4, key="bp_hrs")
+        bp_days = st.slider("📅 " + ("วัน/ปี" if TH else "Days/Year"), 250, 330, 300, key="bp_days")
+        base_hrs_map = {'micro': 4, 'starter': 5, 'mid': 6, 'industrial': 4.5}
+        hour_scale = bp_hours / base_hrs_map[bp_tier]
+        if hour_scale > 1:
+            st.info(f"⚡ {hour_scale:.1f}× capacity — same equipment, {bp_hours} hrs instead of {base_hrs_map[bp_tier]}")
+
+        st.divider()
+        st.markdown("#### 🌾 " + ("ปริมาณฟาง" if TH else "Straw Supply"))
+        bp_2crop = st.toggle("🌾🌾 " + ("ข้าว 2 รอบ" if TH else "2nd Crop (+70% straw)"), value=True, key="bp_2c")
+        straw_mult = 1.7 if bp_2crop else 1.0
+        base_caps = {'micro': 80, 'starter': 200, 'mid': 500, 'industrial': 1000}
+        scaled_cap = base_caps[bp_tier] * hour_scale
+        rai_for_full = max(5, round(scaled_cap * bp_days / (650 * straw_mult)))
+        rai_defaults = {'micro': (5, 50, 30), 'starter': (10, 120, 50), 'mid': (30, 300, 120), 'industrial': (50, 600, 250)}
+        rai_min, rai_max_base, rai_def = rai_defaults[bp_tier]
+        rai_max = max(rai_max_base, rai_for_full + 50)
+        rai_def_adj = min(rai_def, rai_max)
+        bp_rai = st.slider("🌾 " + ("พื้นที่นา (ไร่)" if TH else "Total Farmland (rai)"), rai_min, rai_max, rai_def_adj, key="bp_rai")
+        bp_straw_avail = round(bp_rai * 650 * straw_mult)
+        hub_need = round(scaled_cap * bp_days)
+        cap_pct = min(100, round(bp_straw_avail / hub_need * 100))
+        if cap_pct >= 100:
+            st.success(f"✅ {bp_rai} rai × {straw_mult}× = {bp_straw_avail:,} kg — **enough** ({hub_need:,} needed)")
         else:
-            bp_owner = False
-            st.caption("👨‍🌾 " + ("ระดับนี้ต้องซื้อฟางจากเกษตรกร" if TH else "Mid/Industrial: buys straw from farmers"))
+            st.warning(f"⚠️ {bp_rai} rai = {bp_straw_avail:,} kg — **{cap_pct}%**. Need {rai_for_full} rai.")
 
-        if bp_owner:
-            bp_rai = st.slider("🌾 " + ("ที่นา (ไร่)" if TH else "Own farm (rai)"), 5, 100, 30, key="bp_or")
-        else:
-            bp_farmers = st.slider("👨‍🌾 " + ("เกษตรกร" if TH else "Farmers"), 10, 100, 30, key="bp_f")
-            bp_straw_price = st.slider("฿/kg " + ("ค่าฟาง" if TH else "straw price"), 3, 10, 5, key="bp_sp")
+        # Product mix
+        bp_plates, bp_bowls, bp_trays, bp_containers = 40, 30, 20, 10
+        bp_radius = 15
 
         st.divider()
-        bp_radius = st.slider("🗺️ " + ("รัศมีบริการ" if TH else "Service Radius (km)"), 5, 50, 15, key="bp_rad")
-
-        st.divider()
-        st.markdown("#### 🍽️ " + ("สัดส่วนผลิตภัณฑ์" if TH else "Product Mix"))
-        bp_plates = st.slider("🍽️ " + ("จาน" if TH else "Plates %"), 0, 100, 40, key="bp_pl")
-        bp_bowls = st.slider("🥣 " + ("ถ้วย" if TH else "Bowls %"), 0, 100, 30, key="bp_bo")
-        bp_trays = st.slider("📦 " + ("ถาด" if TH else "Trays %"), 0, 100, 20, key="bp_tr")
-        bp_containers = 100 - bp_plates - bp_bowls - bp_trays
-        if bp_containers < 0:
-            st.error("Total > 100%! Adjust sliders.")
-            bp_containers = 0
-        st.caption(f"🥡 " + ("กล่อง" if TH else "Containers") + f": {bp_containers}%")
-
-        st.divider()
-        st.markdown("#### 💡 " + ("ลดต้นทุน" if TH else "Cost Optimizers"))
-        bp_family = st.checkbox("👨‍👩‍👧 " + ("แรงงานครอบครัว" if TH else "Family Labor (฿0 wages)"), key="bp_fl")
-        bp_solar = st.checkbox("☀️ " + ("ตากแดดแทนเตาแก๊ส" if TH else "Solar Drying (-60% energy)"), key="bp_sd")
-        bp_biomass = st.checkbox("🔥 " + ("เชื้อเพลิงจากฟาง" if TH else "Biomass Fuel (-30% energy)"), key="bp_bf")
-        bp_auto = st.checkbox("🤖 " + ("ระบบกึ่งอัตโนมัติ" if TH else "Automation (-1 worker)"), key="bp_au")
-        bp_batch = st.checkbox("📅 " + ("ผลิตเป็นรอบ" if TH else "Batch Scheduling (-15% energy)"), key="bp_bs")
+        st.markdown("#### 🔧 " + ("ปรับแต่ง" if TH else "Optimizers"))
+        bp_yield = st.slider("🏭 " + ("เพิ่ม yield" if TH else "Yield Boost (longer soak)"), 0, 15, 0, key="bp_yb")
+        bp_bulk = st.checkbox("📋 " + ("สัญญาขายส่ง +50%" if TH else "Bulk Contract (+50% pricing)"), key="bp_bk")
+        bp_auto_mix = st.checkbox("🍽️ " + ("ผสมอัตโนมัติ" if TH else "Auto-Optimize Product Mix"), key="bp_am")
+        bp_transport = st.slider("🚛 " + ("ระยะส่ง km" if TH else "Delivery Distance (km)"), 0, 50, 0, key="bp_tk")
 
         st.divider()
         st.markdown("#### 📈 " + ("เพิ่มรายได้" if TH else "Revenue Boosters"))
@@ -3836,31 +3897,46 @@ elif lab == "📦 Bio-Packaging Hub":
         bp_cert = st.checkbox("📜 " + ("ใบรับรอง +25%" if TH else "Compostable Cert (+25%)"), key="bp_ce")
         bp_deliv = st.checkbox("🛵 " + ("พาร์ทเนอร์เดลิเวอรี่" if TH else "Delivery Partner (+30%)"), key="bp_dl")
 
+
         st.divider()
-        st.markdown("#### 💼 " + ("เจ้าของแพลตฟอร์ม" if TH else "Platform Owner"))
-        bp_finance = st.radio("💰 " + ("โมเดลธุรกิจ" if TH else "Financing"),
-                             ['revenue_share', 'kit_sale', 'installment'],
-                             format_func=lambda x: {'revenue_share': '🤝 Revenue Share', 'kit_sale': '🧰 Kit Sale', 'installment': '📅 Installments'}[x], key="bp_fin")
-        if bp_finance == 'revenue_share':
-            bp_share = st.slider("📊 " + ("ส่วนแบ่ง %" if TH else "Your Share %"), 10, 50, 35, key="bp_sh")
-        else:
-            bp_share = 35
-        bp_hubs = st.slider("🏭 " + ("จำนวนฮับ" if TH else "Number of Hubs"), 1, 50, 5, key="bp_nh")
+        with st.expander("💼 " + ("นักลงทุน/แพลตฟอร์ม" if TH else "Investor / Scale-Up"), expanded=False):
+            st.caption("ถ้ามีคนลงทุนให้ — จะแบ่งกำไรยังไง?" if TH else "If someone invests in your equipment — how do you split profits?")
+            bp_finance = st.radio("💰 " + ("โมเดล" if TH else "Model"),
+                                 ['revenue_share', 'kit_sale', 'installment'],
+                                 format_func=lambda x: {
+                                     'revenue_share': '🤝 Profit Split (investor takes %)',
+                                     'kit_sale': '🧰 Buy Equipment (you own 100%)',
+                                     'installment': '📅 Pay Monthly (own after 10 months)'}[x], key="bp_fin")
+            if bp_finance == 'revenue_share':
+                bp_share = st.slider("📊 " + ("ส่วนนักลงทุน %" if TH else "Investor Cut %"), 10, 50, 35, key="bp_sh")
+                st.caption(f"Investor gets {bp_share}% of profit → You keep {100-bp_share}%")
+            else:
+                bp_share = 35
+            bp_hubs = st.slider("🏭 " + ("ขยายกี่ฮับ" if TH else "Scale to N hubs"), 1, 50, 5, key="bp_nh")
+            st.caption(f"Projection: what if the investor sets up {bp_hubs} hubs like yours?")
 
     r = compute_bio_packaging_hub(
         tier=bp_tier,
-        n_farmers=1 if bp_owner else bp_farmers,
-        straw_buy_price=0 if bp_owner else bp_straw_price,
+        total_rai=bp_rai,
+        straw_buy_price=0,
+        second_crop=bp_2crop,
         pct_plates=bp_plates, pct_bowls=bp_bowls, pct_trays=bp_trays,
         pct_containers=max(0, bp_containers),
-        owner_is_farmer=bp_owner,
-        owner_rai=bp_rai if bp_owner else 15,
-        opt_family_labor=bp_family, opt_solar_drying=bp_solar,
-        opt_biomass_fuel=bp_biomass, opt_automation=bp_auto,
-        opt_batch_schedule=bp_batch,
+        auto_mix=bp_auto_mix,
+        days_per_year=bp_days,
+        work_hours_per_day=bp_hours,
+        yield_boost=bp_yield,
+        bulk_contract=bp_bulk,
+        transport_km=bp_transport,
+        opt_family_labor=True, opt_solar_drying=True,
+        opt_biomass_fuel=True, opt_automation=True,
+        opt_batch_schedule=True,
         opt_branding=bp_brand, opt_export=bp_export,
         opt_certification=bp_cert, opt_delivery=bp_deliv,
-        process_method=bp_process, service_radius_km=bp_radius,
+        opt_custom_molds=True, opt_seed_trays=True,
+        opt_egg_cartons=True, opt_coconut_blend=True,
+        opt_sell_training=True,
+        process_method='lime', service_radius_km=bp_radius,
         financing_model=bp_finance, revenue_share_pct=bp_share, n_hubs=bp_hubs,
     )
 
@@ -4004,6 +4080,21 @@ elif lab == "📦 Bio-Packaging Hub":
 """)
 
 
+        # ─── Standard Plan ───
+        with st.expander("✅ " + ("แผนมาตรฐาน — รวมอะไรบ้าง" if TH else "Standard Plan — What's Included"), expanded=False):
+            st.markdown("""
+| Optimizer | Savings | How It Works |
+|-----------|---------|-------------|
+| 🍋 **Lime Water Process** | -80% chemicals | Soak in lime ฿5/kg instead of NaOH ฿40/kg. Same quality, food-safe |
+| 👨‍👩‍👧 **Family Labor** | -100% wages | Owner + family operate. No hired workers needed |
+| ☀️ **Solar Drying** | -60% energy | Bamboo racks + clear roof. Sun dries for free |
+| 🔥 **Biomass Fuel** | -30% energy | Burn waste straw in brick stove for heating |
+| 🤖 **Automation** | -1 worker | Car jack press + timer = less manual work |
+| 📅 **Batch Scheduling** | -15% energy | Batch runs instead of all-day idling |
+
+> 💡 All optimizers are **included by default** because they require minimal or zero extra investment and dramatically reduce costs.
+            """)
+
         # ═══════════════════════════════════════
         # TABS
         # ═══════════════════════════════════════
@@ -4098,26 +4189,42 @@ elif lab == "📦 Bio-Packaging Hub":
                 with sv3:
                     st.metric("📈 Profit Boost", f"+฿{s['total']:,}/yr", delta="Extra profit")
 
-            # Revenue Boosts
-            if r['revenue_boosts']:
+            # Revenue & Profit Boosts
+            all_boosts = r['revenue_boosts'] + r['zero_cost_boosts']
+            if all_boosts:
                 st.divider()
-                st.subheader("📈 Revenue Boosts")
-                for rb in r['revenue_boosts']:
-                    inv_str = f" (invest ฿{rb['invest']:,})" if rb['invest'] > 0 else ""
-                    st.success(f"{rb['name']}: **+฿{rb['boost']:,}/yr**{inv_str}")
+                total_boost = sum(b['boost'] for b in all_boosts)
+                total_extra = sum(b.get('invest', 0) for b in all_boosts)
+                st.subheader("📈 " + ("รายได้เสริม" if TH else f"All Boosts: +฿{total_boost:,}/yr"))
+
+                # Zero-cost (always active)
+                if r['zero_cost_boosts']:
+                    st.markdown("**✅ " + ("รวมในแผน (฿0)" if TH else "Included Free (Standard Plan)") + ":**")
+                    for zb in r['zero_cost_boosts']:
+                        st.success(f"{zb['name']}: **+฿{zb['boost']:,}/yr** — {zb['desc']}")
+
+                # User-toggled
+                if r['revenue_boosts']:
+                    st.markdown("**🎯 " + ("เลือกเพิ่ม" if TH else "Your Selected Extras") + ":**")
+                    for rb in r['revenue_boosts']:
+                        inv_str = f" *(invest ฿{rb['invest']:,})*" if rb['invest'] > 0 else ""
+                        st.info(f"{rb['name']}: **+฿{rb['boost']:,}/yr**{inv_str}\n\n{rb.get('desc', '')}")
 
             # Farmer Income
             st.divider()
             fi = r['farmer_income']
-            st.subheader("🌾 " + ("รายได้เกษตรกร" if TH else "Farmer Income"))
-            if fi.get('mode') == 'owner':
-                if fi['total'] > 0:
-                    st.metric("Total Income", f"฿{fi['total']:,}/yr", delta=f"฿{fi['monthly']:,}/mo")
-                else:
-                    st.warning("⚠️ Loss — try more rai or cooperative mode.")
-            else:
-                st.metric(f"Each farmer ({r['n_farmers']} total)", f"฿{fi['total']:,}/yr",
-                          delta=f"฿{fi['monthly']:,}/mo from straw sales")
+            st.subheader("🌾 " + ("ฟาร์ม & รายได้" if TH else "Farm Capacity & Income"))
+            fi1, fi2 = st.columns(2)
+            with fi1:
+                st.metric("🌾 Farm Supply", f"{fi['straw_from_farm']:,} kg/yr")
+                st.metric("🏭 Hub Needs", f"{fi['hub_needs']:,} kg/yr")
+                st.caption(f"Farm utilization: {fi['farm_utilization']}% | QC reject: {fi['qc_reject_pct']}%")
+            with fi2:
+                st.metric("🌾 Rice Income", f"฿{fi['rice_income']:,}/yr")
+                st.metric("📦 Packaging (your share)", f"฿{fi['packaging_profit']:,}/yr")
+                if fi['platform_cut'] > 0:
+                    st.caption(f"Platform takes: ฿{fi['platform_cut']:,}/yr")
+                st.metric("💰 **Total**", f"฿{fi['total']:,}/yr", delta=f"฿{fi['monthly']:,}/mo")
 
             with st.expander("📊 Compare All Tiers"):
                 tier_df = pd.DataFrame([{
@@ -4186,41 +4293,58 @@ elif lab == "📦 Bio-Packaging Hub":
 
         # ═══════════ TAB 4: COVERAGE ═══════════
         with tab_cover:
-            st.subheader("🗺️ " + ("พื้นที่ & อุปสงค์" if TH else "Coverage & Demand"))
+            st.subheader("🌾 " + ("ฟาร์ม & ตลาด" if TH else "Your Farm & Market"))
             cov = r['coverage']
-            cc1, cc2, cc3 = st.columns(3)
-            with cc1:
-                st.metric("📍 Radius", f"{cov['radius_km']} km")
-                st.metric("🌾 Farmland", f"{cov['farmland_rai']:,} rai")
-            with cc2:
-                st.metric("🌾 Straw Available", f"{cov['straw_in_radius']:,} kg")
-                st.metric("🏭 Hub Needs", f"{cov['hub_needs']:,} kg")
-            with cc3:
-                st.metric("📊 Usage", f"{cov['coverage_pct']}%")
-                st.caption("% of area straw used")
-            if cov['coverage_pct'] < 1:
-                st.success(f"🟢 Uses only **{cov['coverage_pct']}%** of straw — room for **{min(9999, round(100/max(cov['coverage_pct'],0.01)))} hubs!**")
+            prod = r['production']
+            fi = r['farmer_income']
+
+            # Your Farm
+            st.markdown("#### 🌾 " + ("ฟาร์มของคุณ" if TH else "Your Farm"))
+            f1, f2, f3 = st.columns(3)
+            with f1:
+                st.metric("🌾 Your Straw", f"{fi['straw_from_farm']:,} kg/yr")
+            with f2:
+                st.metric("🏭 Hub Uses", f"{fi['hub_needs']:,} kg/yr")
+            with f3:
+                excess = fi['straw_from_farm'] - fi['hub_needs']
+                if excess > 0:
+                    st.metric("📦 Excess", f"{excess:,} kg", delta="sell as mulch ฿2/kg")
+                else:
+                    st.metric("⚠️ Shortage", f"{abs(excess):,} kg", delta="need more rai")
 
             st.divider()
-            st.subheader("🛒 " + ("อุปสงค์" if TH else "Local Demand"))
+            st.markdown("#### 🏭 " + ("ผลผลิต" if TH else "Your Production"))
+            p1, p2, p3 = st.columns(3)
+            with p1:
+                st.metric("📦 Daily Output", f"{prod['effective_capacity_day']} kg/day")
+            with p2:
+                st.metric("🍽️ Monthly Pieces", f"{cov['supply_pieces_mo']:,} pcs")
+            with p3:
+                st.metric("✅ QC Pass", f"{100 - prod['qc_reject_pct']}%")
+
+            st.divider()
+            st.markdown("#### 🛒 " + ("ตลาดท้องถิ่น" if TH else "Local Market (15km)"))
             dd1, dd2, dd3 = st.columns(3)
             with dd1:
-                st.metric("🍜 Restaurants", f"{cov['restaurants']}")
+                st.metric("🍜 Restaurants Nearby", f"{cov['restaurants']}")
             with dd2:
-                st.metric("📦 Demand", f"{cov['demand_pieces_mo']:,} pcs/mo")
+                st.metric("📦 They Need", f"{cov['demand_pieces_mo']:,} pcs/mo")
             with dd3:
-                st.metric("🏭 Supply", f"{cov['supply_pieces_mo']:,} pcs/mo")
+                st.metric("🏭 You Make", f"{cov['supply_pieces_mo']:,} pcs/mo")
+
             met = cov['demand_met_pct']
-            if met < 50:
-                st.info(f"📈 Meet **{met}%** of demand — room to grow!")
+            if met < 10:
+                st.info(f"📈 You cover **{met}%** of local demand — huge room to grow! Scale up hours or tier.")
+            elif met < 50:
+                st.info(f"📈 You cover **{met}%** — growing well!")
             elif met < 100:
-                st.success(f"✅ Meet **{met}%** of demand — good fit!")
+                st.success(f"✅ You cover **{met}%** — great market fit!")
             else:
                 st.warning("⚠️ Supply > demand — explore export or delivery partners.")
 
             fig_rad = go.Figure(go.Indicator(
                 mode="gauge+number", value=cov['supply_pieces_mo'],
-                title={'text': "Supply vs Demand (pcs/mo)", 'font': {'size': 14, 'color': 'white'}},
+                title={'text': "Your Supply vs Local Demand (pcs/mo)", 'font': {'size': 14, 'color': 'white'}},
                 gauge={'axis': {'range': [0, max(cov['demand_pieces_mo'], cov['supply_pieces_mo']) * 1.2]},
                        'bar': {'color': '#10b981'},
                        'steps': [{'range': [0, cov['demand_pieces_mo']], 'color': 'rgba(239,68,68,0.3)'}],
@@ -4246,10 +4370,10 @@ elif lab == "📦 Bio-Packaging Hub":
 
             st.divider()
             st.subheader("🔬 " + ("ขั้นตอนต่อวัน" if TH else "Daily Steps"))
-            if bp_process == 'pulp':
+            if r['process_method'] == 'pulp':
                 steps = [("🌾 Cut & soak", "30 min"), ("🧪 NaOH pulp", "2-4 hrs"), ("💧 Wash", "1 hr"),
                          ("🔄 Mix", "30 min"), ("🏭 Press", "10s/pc"), ("🔥 Dry", "20-30 min")]
-            elif bp_process == 'lime':
+            elif r['process_method'] == 'lime':
                 steps = [("🌾 Chop", "15 min"), ("🍋 Lime soak", "Overnight ⏳"), ("🔄 Mixer", "1 hr"),
                          ("🥣 Starch mix", "15 min"), ("🏭 Press", "30s/pc"), ("☀️ Fan dry", "2-4 hrs")]
             else:
@@ -4260,7 +4384,7 @@ elif lab == "📦 Bio-Packaging Hub":
 
             method_info = {'pulp': "Best quality. Standard industry.", 'lime': "80% cheaper chemicals! Lime ฿5 vs NaOH ฿40/kg.",
                           'direct': "Skip pulping! Fastest (15 min). Rougher finish."}
-            st.info(f"**Method: {r['process_method'].upper()}** — {method_info[bp_process]}")
+            st.info(f"**Method: {r['process_method'].upper()}** — {method_info[r['process_method']]}")
 
             st.divider()
             st.subheader("📊 " + ("เปรียบเทียบรายได้" if TH else "Earnings vs Jobs"))
